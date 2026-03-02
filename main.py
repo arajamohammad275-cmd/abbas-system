@@ -7,7 +7,7 @@ from datetime import datetime
 st.set_page_config(page_title="نظام حضور الأنشطة", layout="centered")
 
 # *** رابط الـ Web App الخاص بك ***
-API_URL = "https://script.google.com/macros/s/AKfycbxwpiAyguMMZugESiw_QPiNA5t_MWr5YKqYOtwSoS_RfubNovE7QvRkhjmzr03dnIBtIA/exec"
+API_URL = "https://script.google.com/macros/s/AKfycbz8pE-oVoMR6UF8-u6x-L3vVj7vr5Iu4zNIUZl4TuFQz_GEiTg-C87Hepy5oxzLjgwojg/exec"
 SHEET_ID = "19p75R69A5cvtwvRnyt1WIWjiqWAEX9GozAHjCzCNqww"
 READ_M = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Students"
 READ_L = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Logs"
