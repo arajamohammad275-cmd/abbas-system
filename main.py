@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 from datetime import datetime
+import time  # أضفنا هذه المكتبة لضبط التوقيت وتخطي الكاش
 
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="نظام حضور الأنشطة", layout="centered")
@@ -9,8 +10,9 @@ st.set_page_config(page_title="نظام حضور الأنشطة", layout="center
 # الروابط
 API_URL = "https://script.google.com/macros/s/AKfycbxwpiAyguMMZugESiw_QPiNA5t_MWr5YKqYOtwSoS_RfubNovE7QvRkhjmzr03dnIBtIA/exec"
 SHEET_ID = "19p75R69A5cvtwvRnyt1WIWjiqWAEX9GozAHjCzCNqww"
-READ_M = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Students"
-READ_L = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Logs"
+# قمنا بفصل الروابط لإضافة خدعة تخطي كاش جوجل شيت لاحقاً
+READ_M_BASE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Students"
+READ_L_BASE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Logs"
 
 # 2. الواجهة الحديثة (Dark Mode & Gradient & Arabic Font)
 st.markdown("""
@@ -53,27 +55,29 @@ st.markdown("""
     }
     label { text-align: right !important; width: 100%; display: block !important; font-weight:bold; color: #e2e8f0; }
 
-    /* الأزرار الحديثة */
-    .stButton>button { 
-        border-radius: 12px; background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
-        color: white !important; font-weight: bold; width: 100%; height: 3.5rem; border: none;
+    /* الأزرار الحديثة بكامل العرض */
+    .stButton>button, .stFormSubmitButton>button { 
+        border-radius: 12px !important; background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
+        color: white !important; font-weight: bold !important; width: 100% !important; height: 3.5rem !important; border: none !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. جلب البيانات بأمان
+# 3. جلب البيانات بأمان (مع خدعة تخطي الكاش)
 @st.cache_data(ttl=0)
 def fetch_data_secure():
     try:
-        m = pd.read_csv(READ_M)
-        l = pd.read_csv(READ_L)
+        # إضافة طابع زمني للرابط يجبر جوجل على إرسال بيانات جديدة فوراً
+        nocache = int(time.time())
+        m = pd.read_csv(f"{READ_M_BASE}&_={nocache}")
+        l = pd.read_csv(f"{READ_L_BASE}&_={nocache}")
         m.columns = [str(c).strip() for c in m.columns]
         l.columns = [str(c).strip() for c in l.columns]
         return m, l
     except:
         return pd.DataFrame(), pd.DataFrame()
 
-# العنوان الرئيسي الجديد
+# العنوان الرئيسي
 st.markdown('<div class="header-box"><h1 class="main-title">نظام حضور الأنشطة</h1></div>', unsafe_allow_html=True)
 
 df_m, df_l = fetch_data_secure()
@@ -82,7 +86,6 @@ PASSWORDS = {"فئة أشبال السالمية": "Salmiya2026", "فئة أشب
 target_cat = st.selectbox("📂 اختر الفئة للإدارة:", list(PASSWORDS.keys()))
 tab_stats, tab_admin = st.tabs(["📊 كشف الالتزام والنسب", "🔐 بوابة المشرف"])
 
-# تصفية البيانات
 m_list = df_m[df_m['الفئة'] == target_cat] if not df_m.empty and 'الفئة' in df_m.columns else pd.DataFrame()
 l_list = df_l[df_l['الفئة'] == target_cat] if not df_l.empty and 'الفئة' in df_l.columns else pd.DataFrame()
 
@@ -91,24 +94,21 @@ with tab_stats:
     if not m_list.empty:
         total_activity_days = len(l_list["التاريخ"].unique()) if not l_list.empty and "التاريخ" in l_list.columns else 0
         
-        # البطاقات الإحصائية الحديثة
         c1, c2 = st.columns(2)
         c1.markdown(f'<div class="metric-card"><h3>👥 إجمالي طلاب الفئة</h3><h2>{len(m_list)}</h2></div>', unsafe_allow_html=True)
         c2.markdown(f'<div class="metric-card"><h3>📅 أيام النشاط</h3><h2>{total_activity_days}</h2></div>', unsafe_allow_html=True)
         
         st.write(f"### 📋 سجل الحضور التفصيلي")
         
-        # حساب الحضور والنسبة المئوية
         display_df = m_list.copy()
         display_df['أيام الحضور'] = display_df['الاسم'].apply(lambda x: len(l_list[l_list['الاسم'] == x]) if not l_list.empty and 'الاسم' in l_list.columns else 0)
         display_df['النسبة المئوية'] = display_df['أيام الحضور'].apply(lambda x: f"{(x / total_activity_days * 100):.1f}%" if total_activity_days > 0 else "0%")
         
-        # عرض الجدول
         st.dataframe(display_df[["الاسم", "المسجد", "أيام الحضور", "النسبة المئوية"]], use_container_width=True, hide_index=True)
     else:
         st.info("لا توجد بيانات لهذه الفئة حالياً.")
 
-# --- التبويب الثاني: بوابة المشرف (آمنة من الأخطاء) ---
+# --- التبويب الثاني: بوابة المشرف ---
 with tab_admin:
     pwd = st.text_input("أدخل كلمة المرور لدخول المشرف:", type="password")
     if pwd == PASSWORDS.get(target_cat):
@@ -117,7 +117,6 @@ with tab_admin:
         
         with sub1:
             if not m_list.empty:
-                # زر الإرسال داخل الـ Form لمنع الخطأ الأحمر
                 with st.form(key="attendance_form_secure", clear_on_submit=False):
                     st.write("### 📅 تاريخ اليوم:")
                     today = st.date_input("", datetime.now(), label_visibility="collapsed")
@@ -127,11 +126,13 @@ with tab_admin:
                     for n in names:
                         if st.checkbox(n, key=f"att_{n}"): selected.append(n)
                     
-                    if st.form_submit_button("✅ اعتماد كشف الحضور"):
+                    # تم استخدام use_container_width لملء الشاشة
+                    if st.form_submit_button("✅ اعتماد كشف الحضور", use_container_width=True):
                         if selected:
                             recs = [{"name": n, "category": target_cat, "date": str(today)} for n in selected]
                             requests.post(API_URL, json={"action": "add_attendance", "records": recs})
                             st.success("تم تسجيل الحضور في جوجل شيت بنجاح!")
+                            time.sleep(1.5) # إعطاء جوجل ثانية لكتابة البيانات
                             st.rerun()
                         else:
                             st.warning("الرجاء تحديد طالب واحد على الأقل.")
@@ -139,25 +140,28 @@ with tab_admin:
                 st.warning("يرجى إضافة طلاب أولاً من تبويب إدارة الطلاب.")
         
         with sub2:
-            # نموذج الإضافة (يمسح الخانات تلقائياً بعد الإضافة)
             with st.form(key="add_student_form_secure", clear_on_submit=True):
                 st.write("### ➕ إضافة طالب جديد")
                 name_in = st.text_input("الاسم الثلاثي")
                 msq_in = st.selectbox("المسجد التابع له", ["شاهه العبيد", "اليوسفين", "العسعوسي", "السهو", "فاطمه الغلوم", "الصقعبي", "الرشيد", "الرومي"])
                 lvl_in = st.selectbox("المرحلة الدراسية", ["الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر", "الحادي عشر", "الثاني عشر", "جامعي"])
                 
-                if st.form_submit_button("إضافة الطالب الآن"):
+                # تم استخدام use_container_width هنا أيضاً
+                if st.form_submit_button("إضافة الطالب الآن", use_container_width=True):
                     if name_in:
                         requests.post(API_URL, json={"action": "add_student", "name": name_in, "mosque": msq_in, "grade": lvl_in, "category": target_cat})
                         st.success(f"تمت إضافة {name_in} بنجاح!")
+                        time.sleep(1.5) # إعطاء جوجل ثانية لكتابة الاسم
+                        st.rerun() # تحديث الصفحة فوراً ليظهر الاسم في التحضير
                     else: 
                         st.error("يرجى كتابة اسم الطالب أولاً")
 
             st.divider()
-            st.write("### 🗑️ حذف طالب")
+            st.write("### حذف طالب")
             del_n = st.selectbox("اختر الاسم المراد حذفه:", [""] + sorted(m_list['الاسم'].tolist()) if not m_list.empty else [""])
-            if st.button("تأكيد الحذف النهائي"):
+            if st.button("تأكيد الحذف النهائي", use_container_width=True):
                 if del_n:
                     requests.post(API_URL, json={"action": "delete_student", "name": del_n, "category": target_cat})
                     st.error(f"تم حذف {del_n} نهائياً.")
+                    time.sleep(1)
                     st.rerun()
