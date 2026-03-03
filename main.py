@@ -163,7 +163,7 @@ with tab_admin:
                         st.error("يرجى كتابة اسم الطالب أولاً")
 
             st.divider()
-            st.write("### 🗑️ حذف طالب")
+            st.write("###  حذف طالب")
             del_n = st.selectbox("اختر الاسم المراد حذفه:", [""] + sorted(m_list['الاسم'].tolist()) if not m_list.empty else [""])
             if st.button("تأكيد الحذف النهائي", use_container_width=True):
                 if del_n:
