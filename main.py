@@ -237,6 +237,7 @@ with tab_admin:
                         })
                     
                     res_df = pd.DataFrame(rep_data)
+                    res_df = res_df.sort_values(by="الاسم")
                     res_df = res_df[[
     "الاسم",
     "المسجد",
