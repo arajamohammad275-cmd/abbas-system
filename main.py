@@ -8,6 +8,7 @@ from datetime import datetime
 # -----------------------------
 if 'rerun_flag' not in st.session_state:
     st.session_state['rerun_flag'] = False
+
 if st.session_state['rerun_flag']:
     st.session_state['rerun_flag'] = False
     st.experimental_rerun()
