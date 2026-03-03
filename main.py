@@ -220,9 +220,7 @@ with tab_admin:
              
 
 if st.button("🔍 تجهيز التقرير التفصيلي", use_container_width=True):
-               
-  
-      if not l_list.empty:
+    if not l_list.empty:
         # تأكد أن التاريخ بصيغة datetime    
 
 
