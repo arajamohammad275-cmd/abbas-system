@@ -168,7 +168,7 @@ with tab_stats:
             hide_index=True
         )
 
-    else:
+else:
         st.info("لا توجد بيانات لهذه الفئة حالياً.")
 # --- التبويب الثاني: بوابة المشرف ---
 with tab_admin:
