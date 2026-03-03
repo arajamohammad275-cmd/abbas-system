@@ -116,9 +116,10 @@ with tab_stats:
         display_df["أيام الحضور"] = display_df["الاسم"].apply(calculate_attendance)
 
         # حساب النسبة المئوية بطريقة صحيحة
-     display_df["النسبة المئوية"] = (
-    (display_df["أيام الحضور"] / total_activity_days) * 100
-).round(1).astype(str) + "%"
+     if condition:
+    display_df["النسبة المئوية"] = (
+        display_df["القيمة"] / display_df["الإجمالي"]
+    ) * 100
         # التأكد من وجود بيانات وسجلات
         if not l_list.empty and "التاريخ" in l_list.columns:
             l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coerce")
