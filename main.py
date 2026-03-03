@@ -1,4 +1,14 @@
 import streamlit as st
+st.markdown(
+    """
+    <style>
+    .dataframe td, .dataframe th {
+        text-align: right !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 import pandas as pd
 import requests
 from datetime import datetime
