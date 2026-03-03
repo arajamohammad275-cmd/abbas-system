@@ -127,9 +127,8 @@ with tab_admin:
                                     [st.session_state['local_logs'], pd.DataFrame([{'الاسم':n,'الفئة':target_cat,'التاريخ':today}])],
                                     ignore_index=True
                                 )
-                            fetch_data_secure.clear()
                             st.success("تم تسجيل الحضور بنجاح!")
-                            st.experimental_rerun()
+                            st.experimental_rerun()  # في النهاية فقط
                         else:
                             st.warning("الرجاء تحديد طالب واحد على الأقل.")
 
@@ -144,7 +143,6 @@ with tab_admin:
                         requests.post(API_URL,json={"action":"add_student","name":name_in,"mosque":msq_in,"grade":lvl_in,"category":target_cat})
                         new_student = pd.DataFrame([{"الاسم":name_in,"المسجد":msq_in,"المرحلة الدراسية":lvl_in,"الفئة":target_cat}])
                         st.session_state['local_students'] = pd.concat([st.session_state['local_students'],new_student],ignore_index=True)
-                        fetch_data_secure.clear()
                         st.success(f"تمت إضافة {name_in} بنجاح!")
                         st.experimental_rerun()
                     else:
@@ -156,7 +154,6 @@ with tab_admin:
                 if del_n:
                     requests.post(API_URL,json={"action":"delete_student","name":del_n,"category":target_cat})
                     st.session_state['local_students'] = st.session_state['local_students'][st.session_state['local_students']['الاسم']!=del_n]
-                    fetch_data_secure.clear()
                     st.success(f"تم حذف {del_n} نهائياً.")
                     st.experimental_rerun()
 
