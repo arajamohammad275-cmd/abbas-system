@@ -219,9 +219,14 @@ with tab_admin:
             
 if st.button("🔍 تجهيز التقرير التفصيلي", use_container_width=True):
     if not l_list.empty:
-        # تأكد أن التاريخ بصيغة datetime    
-             mask = (l_list['التاريخ'] >= str(date_from)) & (l_list['التاريخ'] <= str(date_to)) filtered_logs = l_list[mask]
-                    days_in_period = len(filtered_logs['التاريخ'].unique()) if not filtered_logs.empty else 0
+# تأكد أن التاريخ بصيغة datetime
+l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coerce")
+
+mask = (
+    (l_list["التاريخ"] >= pd.to_datetime(date_from)) &
+    (l_list["التاريخ"] <= pd.to_datetime(date_to))
+)
+        days_in_period = len(filtered_logs['التاريخ'].unique()) if not filtered_logs.empty else 0
                     
                     rep_data = []
                     for _, student in m_list.iterrows():
