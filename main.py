@@ -116,24 +116,9 @@ with tab_stats:
         display_df["أيام الحضور"] = display_df["الاسم"].apply(calculate_attendance)
 
         # حساب النسبة المئوية بطريقة صحيحة
-        if total_activity_days > 0:
-    display_df["النسبة المئوية"] = (
-        (display_df["أيام الحضور"] / total_activity_days) * 100
-    ).round(1)
-else:
-    display_df["النسبة المئوية"] = 0.0
-        else:
-            display_df["النسبة المئوية"] = "0%"
-
-        st.dataframe(
-            display_df[["الاسم", "المسجد", "أيام الحضور", "النسبة المئوية"]],
-            use_container_width=True,
-            hide_index=True
-        )
-
-    else:
-        st.info("لا توجد بيانات لهذه الفئة حالياً.")
-
+     display_df["النسبة المئوية"] = (
+    (display_df["أيام الحضور"] / total_activity_days) * 100
+).round(1).astype(str) + "%"
         # التأكد من وجود بيانات وسجلات
         if not l_list.empty and "التاريخ" in l_list.columns:
             l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coerce")
