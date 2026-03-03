@@ -116,17 +116,27 @@ with tab_admin:
         
         # 1. تسجيل الحضور
         with sub1:
-    with sub1:
-    st.write("### ⚡ تسجيل الحضور + إضافة سريعة")
-
-    col_add1, col_add2 = st.columns([3,1])
-
-    with col_add1:
-        quick_name = st.text_input("➕ إضافة طالب جديد بسرعة")
-
-    with col_add2:
-        if st.button("إضافة فورية"):
-            ...
+            if not m_list.empty:
+                with st.form(key="attendance_form_secure", clear_on_submit=True):
+                    today = st.date_input("تاريخ اليوم:", datetime.now())
+                    st.write("اختر الحاضرين:")
+                    selected = []
+                    names = sorted(m_list['الاسم'].unique())
+                    for n in names:
+                        if st.checkbox(n, key=f"att_{n}"): selected.append(n)
+                    
+                    if st.form_submit_button("✅ اعتماد كشف الحضور", use_container_width=True):
+                        if selected:
+                            recs = [{"name": n, "category": target_cat, "date": str(today)} for n in selected]
+                            requests.post(API_URL, json={"action": "add_attendance", "records": recs})
+                            st.cache_data.clear() 
+                            st.success("تم تسجيل الحضور بنجاح!")
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.warning("الرجاء تحديد طالب واحد على الأقل.")
+            else:
+                st.warning("يرجى إضافة طلاب أولاً.")
         
         # 2. إضافة وحذف الطلاب
         with sub2:
