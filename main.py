@@ -116,44 +116,17 @@ with tab_admin:
         
         # 1. تسجيل الحضور
         with sub1:
-    st.write("### ⚡ إضافة سريعة + تسجيل الحضور")
+    with sub1:
+    st.write("### ⚡ تسجيل الحضور + إضافة سريعة")
 
     col_add1, col_add2 = st.columns([3,1])
 
     with col_add1:
-        quick_name = st.text_input("➕ إضافة طالب جديد بسرعة (اكتب الاسم واضغط إضافة)")
+        quick_name = st.text_input("➕ إضافة طالب جديد بسرعة")
 
     with col_add2:
         if st.button("إضافة فورية"):
-            if quick_name:
-                # إرسال لجوجل
-                requests.post(API_URL, json={
-                    "action": "add_student",
-                    "name": quick_name,
-                    "mosque": "غير محدد",
-                    "grade": "غير محدد",
-                    "category": target_cat
-                })
-
-                # إضافته لذاكرة الموقع فوراً
-                new_student = pd.DataFrame([{
-                    "الاسم": quick_name,
-                    "المسجد": "غير محدد",
-                    "المرحلة الدراسية": "غير محدد",
-                    "الفئة": target_cat
-                }])
-
-                st.session_state['local_students'] = pd.concat(
-                    [st.session_state['local_students'], new_student],
-                    ignore_index=True
-                )
-
-                st.success(f"تمت إضافة {quick_name} فوراً ✅")
-                st.rerun()
-            else:
-                st.warning("اكتب اسم الطالب أولاً")
-
-    st.divider()
+            ...
         
         # 2. إضافة وحذف الطلاب
         with sub2:
