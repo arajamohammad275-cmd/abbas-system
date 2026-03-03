@@ -20,7 +20,7 @@ READ_M_BASE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=ou
 READ_L_BASE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Logs"
 
 # -----------------------------
-# 2. واجهة RTL وتصميم جميل
+# 2. تصميم RTL
 # -----------------------------
 st.markdown("""
 <style>
@@ -41,7 +41,7 @@ label { text-align: right !important; width: 100%; display: block !important; fo
 """, unsafe_allow_html=True)
 
 # -----------------------------
-# 3. جلب البيانات من جوجل شيت
+# 3. جلب البيانات
 # -----------------------------
 @st.cache_data(ttl=0)
 def fetch_data_secure():
@@ -75,13 +75,13 @@ m_list = df_m[df_m['الفئة'] == target_cat].sort_values(by="الاسم", ign
 l_list = df_l[df_l['الفئة'] == target_cat] if not df_l.empty else pd.DataFrame()
 
 # =============================
-# تبويب كشف الالتزام والنسب
+# كشف الالتزام والنسب
 # =============================
 with tab_stats:
     if m_list.empty:
         st.info("لا توجد طلاب في هذه الفئة حتى الآن.")
     else:
-        # تنظيف الأسماء
+        # تنظيف الأسماء والتواريخ
         m_list['الاسم'] = m_list['الاسم'].astype(str).str.strip()
         if not l_list.empty and 'التاريخ' in l_list.columns and 'الاسم' in l_list.columns:
             l_list['الاسم'] = l_list['الاسم'].astype(str).str.strip()
@@ -89,26 +89,24 @@ with tab_stats:
         else:
             l_list = pd.DataFrame(columns=['الاسم', 'التاريخ'])
         
-        total_activity_days = l_list['التاريخ'].nunique() if not l_list.empty else 0
+        total_activity_days = l_list['التاريخ'].dt.date.nunique() if not l_list.empty else 0
 
-        # حساب أيام الحضور لكل طالب
+        # دالة حساب الحضور لكل طالب
         def calculate_attendance(student_name):
             student_logs = l_list[l_list['الاسم'] == student_name]
-            return student_logs['التاريخ'].nunique() if not student_logs.empty else 0
+            return student_logs['التاريخ'].dt.date.nunique() if not student_logs.empty else 0
 
         m_list['أيام الحضور'] = m_list['الاسم'].apply(calculate_attendance)
-
-        # حساب النسبة المئوية
-        if total_activity_days > 0:
-            m_list['النسبة المئوية'] = (m_list['أيام الحضور'] / total_activity_days * 100).round(1).astype(str) + '%'
-        else:
-            m_list['النسبة المئوية'] = '0%'
+        m_list['النسبة المئوية'] = (
+            (m_list['أيام الحضور'] / total_activity_days * 100).round(1).astype(str) + '%'
+            if total_activity_days > 0 else '0%'
+        )
 
         display_df = m_list.sort_values(by='الاسم', ignore_index=True)
         st.table(display_df[['الاسم', 'المسجد', 'المرحلة الدراسية', 'أيام الحضور', 'النسبة المئوية']])
 
 # =============================
-# تبويب بوابة المشرف
+# بوابة المشرف + تسجيل حضور + إضافة/حذف طلاب + التقارير التفصيلية
 # =============================
 with tab_admin:
     pwd = st.text_input("أدخل كلمة المرور لدخول المشرف:", type="password")
@@ -140,7 +138,7 @@ with tab_admin:
             else:
                 st.warning("يرجى إضافة طلاب أولاً.")
         
-        # إضافة وحذف الطلاب
+        # إضافة/حذف الطلاب
         with sub2:
             with st.form(key="add_student_form_secure", clear_on_submit=True):
                 st.write("### ➕ إضافة طالب جديد")
