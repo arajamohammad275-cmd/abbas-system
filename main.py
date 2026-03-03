@@ -78,29 +78,34 @@ l_list = df_l[df_l['الفئة'] == target_cat] if not df_l.empty else pd.DataFr
 # تبويب كشف الالتزام والنسب
 # =============================
 with tab_stats:
-    if not m_list.empty:
-        if not l_list.empty and "التاريخ" in l_list.columns and "الاسم" in l_list.columns:
-            l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coerce")
-            l_list["الاسم"] = l_list["الاسم"].astype(str).str.strip()
-            total_activity_days = l_list["التاريخ"].nunique()
-        else:
-            total_activity_days = 0
-
-        display_df = m_list.copy()
-        display_df["الاسم"] = display_df["الاسم"].astype(str).str.strip()
-        display_df = display_df.sort_values(by="الاسم", ignore_index=True)
-
-        display_df["أيام الحضور"] = display_df["الاسم"].apply(
-            lambda n: l_list[l_list["الاسم"] == n]["التاريخ"].nunique() if not l_list.empty else 0
-        )
-
-        display_df["النسبة المئوية"] = (
-            (display_df["أيام الحضور"] / total_activity_days * 100).round(1).astype(str) + "%"
-        ) if total_activity_days > 0 else "0%"
-
-        st.table(display_df[["الاسم", "المسجد", "المرحلة الدراسية", "أيام الحضور", "النسبة المئوية"]])
-    else:
+    if m_list.empty:
         st.info("لا توجد طلاب في هذه الفئة حتى الآن.")
+    else:
+        # تنظيف الأسماء
+        m_list['الاسم'] = m_list['الاسم'].astype(str).str.strip()
+        if not l_list.empty and 'التاريخ' in l_list.columns and 'الاسم' in l_list.columns:
+            l_list['الاسم'] = l_list['الاسم'].astype(str).str.strip()
+            l_list['التاريخ'] = pd.to_datetime(l_list['التاريخ'], errors='coerce')
+        else:
+            l_list = pd.DataFrame(columns=['الاسم', 'التاريخ'])
+        
+        total_activity_days = l_list['التاريخ'].nunique() if not l_list.empty else 0
+
+        # حساب أيام الحضور لكل طالب
+        def calculate_attendance(student_name):
+            student_logs = l_list[l_list['الاسم'] == student_name]
+            return student_logs['التاريخ'].nunique() if not student_logs.empty else 0
+
+        m_list['أيام الحضور'] = m_list['الاسم'].apply(calculate_attendance)
+
+        # حساب النسبة المئوية
+        if total_activity_days > 0:
+            m_list['النسبة المئوية'] = (m_list['أيام الحضور'] / total_activity_days * 100).round(1).astype(str) + '%'
+        else:
+            m_list['النسبة المئوية'] = '0%'
+
+        display_df = m_list.sort_values(by='الاسم', ignore_index=True)
+        st.table(display_df[['الاسم', 'المسجد', 'المرحلة الدراسية', 'أيام الحضور', 'النسبة المئوية']])
 
 # =============================
 # تبويب بوابة المشرف
