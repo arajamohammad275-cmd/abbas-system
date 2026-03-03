@@ -117,33 +117,28 @@ with tab_admin:
                     today = st.date_input("تاريخ اليوم:", datetime.now())
                     st.write("اختر الحاضرين:")
                     selected = [n for n in sorted(m_list['الاسم'].unique()) if st.checkbox(n, key=f"att_{n}")]
-
                     if st.form_submit_button("✅ اعتماد كشف الحضور", use_container_width=True):
                         if selected:
-                            # إرسال للـ API
                             recs = [{"name": n, "category": target_cat, "date": str(today)} for n in selected]
                             requests.post(API_URL, json={"action":"add_attendance","records":recs})
-                            
-                            # تحديث مباشر في الجلسة (بدون انتظار الشيت)
+                            # تحديث مباشر في الجلسة
                             for n in selected:
                                 st.session_state['local_logs'] = pd.concat(
                                     [st.session_state['local_logs'], pd.DataFrame([{'الاسم':n,'الفئة':target_cat,'التاريخ':today}])],
                                     ignore_index=True
                                 )
-
                             fetch_data_secure.clear()
                             st.success("تم تسجيل الحضور بنجاح!")
                             st.experimental_rerun()
                         else:
                             st.warning("الرجاء تحديد طالب واحد على الأقل.")
 
-        # إضافة وحذف الطلاب
+        # إضافة/حذف الطلاب
         with sub2:
             with st.form(key="add_student_form_secure", clear_on_submit=True):
                 name_in = st.text_input("الاسم الثلاثي")
                 msq_in = st.selectbox("المسجد", ["شاهه العبيد","اليوسفين","العسعوسي","السهو","فاطمه الغلوم","الصقعبي","الرشيد","الرومي"])
                 lvl_in = st.selectbox("المرحلة الدراسية", ["الرابع","الخامس","السادس","السابع","الثامن","التاسع","العاشر","الحادي عشر","الثاني عشر","جامعي"])
-
                 if st.form_submit_button("إضافة الطالب الآن", use_container_width=True):
                     if name_in:
                         requests.post(API_URL,json={"action":"add_student","name":name_in,"mosque":msq_in,"grade":lvl_in,"category":target_cat})
@@ -176,7 +171,7 @@ with tab_admin:
                 all_logs['الاسم'] = all_logs['الاسم'].astype(str).str.strip()
                 all_logs['التاريخ'] = pd.to_datetime(all_logs['التاريخ'],errors='coerce')
                 mask = (all_logs['التاريخ']>=pd.to_datetime(date_from)) & (all_logs['التاريخ']<=pd.to_datetime(date_to))
-                filtered_logs = all_logs[mask]
+                filtered_logs = all_logs[mask] if not all_logs.empty else pd.DataFrame(columns=all_logs.columns)
                 days_in_period = len(filtered_logs['التاريخ'].dt.date.unique()) if not filtered_logs.empty else 0
 
                 rep_data=[]
