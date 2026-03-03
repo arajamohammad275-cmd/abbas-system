@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 from datetime import datetime
+import time
 
 # -----------------------------
 # إعدادات الصفحة
@@ -87,7 +88,7 @@ with tab_stats:
         st.table(m_list[['الاسم','المسجد','المرحلة الدراسية','أيام الحضور','النسبة المئوية']])
 
 # =============================
-# بوابة المشرف (Turbo)
+# بوابة المشرف
 # =============================
 with tab_admin:
     pwd = st.text_input("أدخل كلمة المرور:", type="password")
@@ -95,26 +96,20 @@ with tab_admin:
         st.success("تم تسجيل الدخول ✅")
         sub1, sub2, sub3 = st.tabs(["📝 تسجيل الحضور","➕ إدارة الطلاب","📥 التقارير التفصيلية"])
 
-        # ----- تسجيل الحضور مباشرة عند التحديد -----
+        # تسجيل الحضور (checkbox)
         with sub1:
             if not m_list.empty:
                 st.write("اختر الحاضرين:")
+                today = datetime.now().date()
                 for n in sorted(m_list['الاسم'].unique()):
                     checked = n in st.session_state['local_logs']['الاسم'].tolist() if not st.session_state['local_logs'].empty else False
-                    if st.checkbox(n, value=checked, key=f"att_{n}"):
-                        if not checked:
-                            # سجل الحضور مباشرة
-                            today = datetime.now().date()
-                            requests.post(API_URL,json={"action":"add_attendance","records":[{"name":n,"category":target_cat,"date":str(today)}]})
-                            st.session_state['local_logs'] = pd.concat([st.session_state['local_logs'], pd.DataFrame([{'الاسم':n,'الفئة':target_cat,'التاريخ':today}])],ignore_index=True)
-                    else:
-                        # إزالة الحضور إذا ألغيت
-                        if checked:
-                            today = datetime.now().date()
-                            st.session_state['local_logs'] = st.session_state['local_logs'][(st.session_state['local_logs']['الاسم']!=n)|(st.session_state['local_logs']['التاريخ']!=today)]
-                            # يمكن إضافة delete API هنا إذا أردت
+                    cb = st.checkbox(n,value=checked,key=f"att_{n}")
+                    if cb and not checked:
+                        # إضافة حضور جديد
+                        requests.post(API_URL,json={"action":"add_attendance","records":[{"name":n,"category":target_cat,"date":str(today)}]})
+                        st.session_state['local_logs'] = pd.concat([st.session_state['local_logs'], pd.DataFrame([{'الاسم':n,'الفئة':target_cat,'التاريخ':today}])],ignore_index=True)
 
-        # ----- إدارة الطلاب -----
+        # إدارة الطلاب
         with sub2:
             with st.form(key="add_student",clear_on_submit=True):
                 name_in=st.text_input("الاسم الثلاثي")
@@ -126,7 +121,6 @@ with tab_admin:
                         new_student=pd.DataFrame([{"الاسم":name_in,"المسجد":msq_in,"المرحلة الدراسية":lvl_in,"الفئة":target_cat}])
                         st.session_state['local_students']=pd.concat([st.session_state['local_students'],new_student],ignore_index=True)
                         st.success(f"تمت إضافة {name_in} ✅")
-            # حذف الطالب
             del_n=st.selectbox("اختر الاسم لحذفه:",[""]+sorted(m_list['الاسم'].tolist()) if not m_list.empty else [""])
             if st.button("حذف الطالب",use_container_width=True):
                 if del_n:
@@ -134,7 +128,7 @@ with tab_admin:
                     st.session_state['local_students']=st.session_state['local_students'][st.session_state['local_students']['الاسم']!=del_n]
                     st.success(f"تم حذف {del_n} ✅")
 
-        # ----- التقارير التفصيلية -----
+        # التقارير التفصيلية
         with sub3:
             d1,d2=st.columns(2)
             date_from=d1.date_input("من تاريخ",datetime.now())
