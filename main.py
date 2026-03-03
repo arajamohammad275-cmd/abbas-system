@@ -1,14 +1,4 @@
 import streamlit as st
-st.markdown(
-    """
-    <style>
-    .dataframe td, .dataframe th {
-        text-align: right !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 import pandas as pd
 import requests
 from datetime import datetime
@@ -127,9 +117,11 @@ with tab_stats:
 
         # حساب النسبة المئوية بطريقة صحيحة
         if total_activity_days > 0:
-            display_df["النسبة المئوية"] = (
-                (display_df["أيام الحضور"] / total_activity_days) * 100
-            ).round(1).astype(str) + "%"
+    display_df["النسبة المئوية"] = (
+        (display_df["أيام الحضور"] / total_activity_days) * 100
+    ).round(1)
+else:
+    display_df["النسبة المئوية"] = 0.0
         else:
             display_df["النسبة المئوية"] = "0%"
 
