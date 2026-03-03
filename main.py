@@ -115,55 +115,30 @@ with tab_stats:
 
         display_df["أيام الحضور"] = display_df["الاسم"].apply(calculate_attendance)
 
-        # حساب النسبة المئوية بطريقة صحيحة
-     if condition:
-    display_df["النسبة المئوية"] = (
-        display_df["القيمة"] / display_df["الإجمالي"]
-    ) * 100
-        # التأكد من وجود بيانات وسجلات
+                # حساب عدد أيام النشاط الفعلية
         if not l_list.empty and "التاريخ" in l_list.columns:
             l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coerce")
             total_activity_days = l_list["التاريخ"].nunique()
         else:
             total_activity_days = 0
 
-        c1, c2 = st.columns(2)
-        c1.markdown(f'<div class="metric-card"><h3>👥 طلاب الفئة</h3><h2>{len(m_list)}</h2></div>', unsafe_allow_html=True)
-        c2.markdown(f'<div class="metric-card"><h3>📅 أيام النشاط</h3><h2>{total_activity_days}</h2></div>', unsafe_allow_html=True)
-
         display_df = m_list.copy()
 
-        # حساب أيام الحضور الفعلية (أيام فريدة لكل طالب)
-        def calculate_attendance(student_name):
-            if not l_list.empty and "الاسم" in l_list.columns:
-                student_logs = l_list[l_list["الاسم"] == student_name]
-                return student_logs["التاريخ"].nunique()
-            return 0
+        # حساب أيام الحضور الفعلية لكل طالب
+        display_df["أيام الحضور"] = display_df["الاسم"].apply(
+            lambda name: l_list[l_list["الاسم"] == name]["التاريخ"].nunique()
+            if not l_list.empty else 0
+        )
 
-        display_df["أيام الحضور"] = display_df["الاسم"].apply(calculate_attendance)
+        # حساب النسبة المئوية
+        if total_activity_days > 0:
+            display_df["النسبة المئوية"] = (
+                (display_df["أيام الحضور"] / total_activity_days) * 100
+            ).round(1).astype(str) + "%"
+        else:
+            display_df["النسبة المئوية"] = "0%"
 
-        # حساب عدد أيام النشاط الفعلية
-if not l_list.empty and "التاريخ" in l_list.columns:
-    l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coerce")
-    total_activity_days = l_list["التاريخ"].nunique()
-else:
-    total_activity_days = 0
-
-display_df = m_list.copy()
-
-# حساب أيام الحضور الفعلية لكل طالب (أيام فريدة)
-display_df["أيام الحضور"] = display_df["الاسم"].apply(
-    lambda name: l_list[l_list["الاسم"] == name]["التاريخ"].nunique()
-    if not l_list.empty else 0
-)
-
-# حساب النسبة المئوية بطريقة صحيحة
-if total_activity_days > 0:
-    display_df["النسبة المئوية"] = (
-        (display_df["أيام الحضور"] / total_activity_days) * 100
-    ).round(1).astype(str) + "%"
-else:
-    display_df["النسبة المئوية"] = "0%"
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
 # --- التبويب الثاني: بوابة المشرف ---
 with tab_admin:
     pwd = st.text_input("أدخل كلمة المرور لدخول المشرف:", type="password")
