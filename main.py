@@ -117,7 +117,7 @@ with tab_admin:
                 # 1. تسجيل الحضور + إضافة سريعة
         with sub1:
 
-            st.write("### ⚡ تسجيل الحضور + إضافة طالب فوري")
+            st.write("### ⚡  إضافة طالب جديد")
 
             # ===== إضافة سريعة =====
             col1, col2 = st.columns([3,1])
@@ -247,7 +247,7 @@ with tab_admin:
                         st.error("يرجى كتابة اسم الطالب أولاً")
 
             st.divider()
-            st.write("### 🗑️ حذف طالب")
+            st.write("###  حذف طالب")
             del_n = st.selectbox("اختر الاسم المراد حذفه:", [""] + sorted(m_list['الاسم'].tolist()) if not m_list.empty else [""])
             if st.button("تأكيد الحذف النهائي", use_container_width=True):
                 if del_n:
