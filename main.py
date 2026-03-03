@@ -220,28 +220,34 @@ with tab_admin:
 if st.button("🔍 تجهيز التقرير التفصيلي", use_container_width=True):
     if not l_list.empty:
 # تأكد أن التاريخ بصيغة datetime
-l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coerce")mask = 
-    (l_list["التاريخ"] >= pd.to_datetime(date_from)) &
-    (l_list["التاريخ"] <= pd.to_datetime(date_to))
-)
-        days_in_period = len(filtered_logs['التاريخ'].unique()) if not filtered_logs.empty else 0
-                    
-                    rep_data = []
-                    for _, student in m_list.iterrows():
-                        count = len(filtered_logs[filtered_logs['الاسم'] == student['الاسم']])
-                        pct = f"{(count / days_in_period * 100):.1f}%" if days_in_period > 0 else "0%"
-                        
-                        rep_data.append({
-                            "الاسم": student['الاسم'],
-                            "المسجد": student['المسجد'],
-                            "المرحلة الدراسية": student['المرحلة الدراسية'],
-                            "أيام الحضور للفترة": count,
-                            "النسبة المئوية": pct
-                        })
-                    
-                    res_df = pd.DataFrame(rep_data)
-                    res_df = res_df.sort_values(by="الاسم")
-                    res_df = res_df[[
+# تأكد أن التاريخ بصيغة datetime
+l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coerce")
+
+# إنشاء فلتر للتواريخ
+mask = (l_list["التاريخ"] >= pd.to_datetime(date_from)) & (l_list["التاريخ"] <= pd.to_datetime(date_to))
+
+# تصفية السجلات
+filtered_logs = l_list[mask]
+
+days_in_period = len(filtered_logs['التاريخ'].dt.date.unique()) if not filtered_logs.empty else 0
+
+rep_data = []
+
+for _, student in m_list.iterrows():
+    count = len(filtered_logs[filtered_logs['الاسم'] == student['الاسم']])
+    pct = f"{(count / days_in_period * 100):.1f}%" if days_in_period > 0 else "0%"
+    
+    rep_data.append({
+        "الاسم": student['الاسم'],
+        "المسجد": student['المسجد'],
+        "المرحلة الدراسية": student['المرحلة الدراسية'],
+        "أيام الحضور للفترة": count,
+        "النسبة المئوية": pct
+    })
+
+res_df = pd.DataFrame(rep_data)
+res_df = res_df.sort_values(by="الاسم")
+res_df = res_df[["الاسم", "المسجد", "المرحلة الدراسية", "أيام الحضور للفترة", "النسبة المئوية"]]
     "الاسم",
     "المسجد",
     "المرحلة الدراسية",
