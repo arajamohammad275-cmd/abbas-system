@@ -1,89 +1,146 @@
-import streamlit as st
-import pandas as pd
-import requests
-from datetime import datetime
-import time
+Skip to content
+arajamohammad275-cmd
+abbas-system
+Repository navigation
+Code
+Issues
+Pull requests
+Actions
+Projects
+Wiki
+Security
+Insights
+Settings
+Files
+Go to file
+t
+main.py
+requirements.txt
+Unsaved changes
+You have unsaved changes on this file that can be restored.
+abbas-system
+/
+main.py
+in
+main
 
-# 1. إعدادات الصفحة
-st.set_page_config(page_title="نظام حضور الأنشطة", layout="centered")
+Edit
 
-# --- الحل السحري: ذاكرة الموقع الفورية ---
-if 'local_students' not in st.session_state:
-    st.session_state['local_students'] = pd.DataFrame(columns=["الاسم", "المسجد", "المرحلة الدراسية", "الفئة"])
+Preview
+Indent mode
 
-# الروابط
-API_URL = "https://script.google.com/macros/s/AKfycbxwpiAyguMMZugESiw_QPiNA5t_MWr5YKqYOtwSoS_RfubNovE7QvRkhjmzr03dnIBtIA/exec"
-SHEET_ID = "19p75R69A5cvtwvRnyt1WIWjiqWAEX9GozAHjCzCNqww"
-READ_M_BASE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Students"
-READ_L_BASE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Logs"
+Spaces
+Indent size
 
-# 2. الواجهة والمحاذاة الإجبارية لليمين (RTL)
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-    
-    * {
-        font-family: 'Cairo', sans-serif !important; 
-        direction: rtl !important; 
-        text-align: right !important;
-    }
-    
-    .stApp { background-color: #0f172a; color: #f8fafc; }
-    
-    .header-box {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        padding: 2rem; border-radius: 20px; border: 1px solid #334155;
-        margin-bottom: 2rem; text-align: center !important;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-    }
-    .main-title { 
-        background: linear-gradient(90deg, #38bdf8, #818cf8);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        font-size: 2.8rem; font-weight: 900; margin: 0; text-align: center !important;
-    }
-    
-    .metric-card {
-        background: #1e293b; border-radius: 15px; padding: 1.5rem;
-        border-right: 5px solid #38bdf8; text-align: center !important; margin-bottom: 1rem;
-    }
-    .metric-card h3 { color: #94a3b8; font-size: 1.2rem; margin-bottom: 10px; text-align: center !important;}
-    .metric-card h2 { color: #f8fafc; font-size: 2.2rem; margin: 0; font-weight: bold; text-align: center !important;}
+8
+Line wrap mode
 
-    div[data-baseweb="select"] > div { direction: rtl !important; text-align: right !important; }
-    .stDataFrame div { direction: rtl !important; text-align: right !important; }
-    .stTextInput input, .stSelectbox div, .stDateInput input { text-align: right !important; direction: rtl !important; }
-    label { text-align: right !important; width: 100%; display: block !important; font-weight:bold; color: #e2e8f0; }
-
-    .stButton>button, .stFormSubmitButton>button { 
-        border-radius: 12px !important; background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
-        color: white !important; font-weight: bold !important; width: 100% !important; height: 3.5rem !important; border: none !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# 3. جلب البيانات 
-@st.cache_data(ttl=0)
-def fetch_data_secure():
-    try:
-        nocache = int(time.time())
-        m = pd.read_csv(f"{READ_M_BASE}&_={nocache}")
-        l = pd.read_csv(f"{READ_L_BASE}&_={nocache}")
-        m.columns = [str(c).strip() for c in m.columns]
-        l.columns = [str(c).strip() for c in l.columns]
-        return m, l
-    except:
-        return pd.DataFrame(columns=["الاسم", "المسجد", "المرحلة الدراسية", "الفئة"]), pd.DataFrame(columns=["الاسم", "الفئة", "التاريخ"])
-
-st.markdown('<div class="header-box"><h1 class="main-title">نظام حضور الأنشطة</h1></div>', unsafe_allow_html=True)
-
-df_m_fetched, df_l = fetch_data_secure()
-
-# --- دمج الأسماء من جوجل شيت + الأسماء المضافة فوراً في الذاكرة ---
-df_m = pd.concat([df_m_fetched, st.session_state['local_students']]).drop_duplicates(subset=['الاسم', 'الفئة'], keep='first')
-
-PASSWORDS = {"فئة أشبال السالمية": "Salmiya2026", "فئة أشبال حولي": "Hawally2026", "فئة الفتية": "Fetya2026", "فئة الشباب": "Shabab2026", "فئة الجامعيين": "Uni2026"}
-
-target_cat = st.selectbox("📂 اختر الفئة للإدارة:", list(PASSWORDS.keys()))
+No wrap
+Editing main.py file contents
+Selection deleted
+ 87
+ 88
+ 89
+ 90
+ 91
+ 92
+ 93
+ 94
+ 95
+ 96
+ 97
+ 98
+ 99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
 tab_stats, tab_admin = st.tabs(["📊 كشف الالتزام والنسب", "🔐 بوابة المشرف"])
 
 m_list = df_m[df_m['الفئة'] == target_cat] if not df_m.empty else pd.DataFrame()
@@ -163,7 +220,7 @@ with tab_admin:
                         st.error("يرجى كتابة اسم الطالب أولاً")
 
             st.divider()
-            st.write("### 🗑️ حذف طالب")
+            st.write("###  حذف طالب")
             del_n = st.selectbox("اختر الاسم المراد حذفه:", [""] + sorted(m_list['الاسم'].tolist()) if not m_list.empty else [""])
             if st.button("تأكيد الحذف النهائي", use_container_width=True):
                 if del_n:
@@ -187,25 +244,4 @@ with tab_admin:
             if st.button("🔍 تجهيز التقرير التفصيلي", use_container_width=True):
                 if not l_list.empty:
                     mask = (l_list['التاريخ'] >= str(date_from)) & (l_list['التاريخ'] <= str(date_to))
-                    filtered_logs = l_list[mask]
-                    days_in_period = len(filtered_logs['التاريخ'].unique()) if not filtered_logs.empty else 0
-                    
-                    rep_data = []
-                    for _, student in m_list.iterrows():
-                        count = len(filtered_logs[filtered_logs['الاسم'] == student['الاسم']])
-                        pct = f"{(count / days_in_period * 100):.1f}%" if days_in_period > 0 else "0%"
-                        
-                        rep_data.append({
-                            "الاسم": student['الاسم'],
-                            "المسجد": student['المسجد'],
-                            "المرحلة الدراسية": student['المرحلة الدراسية'],
-                            "أيام الحضور للفترة": count,
-                            "النسبة المئوية": pct
-                        })
-                    
-                    res_df = pd.DataFrame(rep_data)
-                    st.dataframe(res_df, use_container_width=True, hide_index=True)
-                    csv = res_df.to_csv(index=False).encode('utf-8-sig')
-                    st.download_button("📥 تحميل التقرير الشامل (Excel / CSV)", csv, f"تقرير_مفصل_{target_cat}.csv", "text/csv", use_container_width=True)
-                else:
-                    st.info("لا توجد سجلات حضور بعد.")
+Use Control + Shift + m to toggle the tab key moving focus. Alternatively, use esc then tab to move to the next interactive element on the page.
