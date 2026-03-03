@@ -226,36 +226,45 @@ l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coer
 # إنشاء فلتر للتواريخ
 mask = (l_list["التاريخ"] >= pd.to_datetime(date_from)) & (l_list["التاريخ"] <= pd.to_datetime(date_to))
 
-# تصفية السجلات
-filtered_logs = l_list[mask]
+# تصفية السجلات حسب التاريخ
+        mask = (l_list["التاريخ"] >= pd.to_datetime(date_from)) & \
+               (l_list["التاريخ"] <= pd.to_datetime(date_to))
+        filtered_logs = l_list[mask]
 
-days_in_period = len(filtered_logs['التاريخ'].dt.date.unique()) if not filtered_logs.empty else 0
+        # حساب عدد الأيام في الفترة
+        days_in_period = len(filtered_logs['التاريخ'].dt.date.unique()) if not filtered_logs.empty else 0
 
-rep_data = []
+        # إنشاء التقرير
+        rep_data = []
+        for _, student in m_list.iterrows():
+            count = len(filtered_logs[filtered_logs['الاسم'] == student['الاسم']])
+            pct = f"{(count / days_in_period * 100):.1f}%" if days_in_period > 0 else "0%"
 
-for _, student in m_list.iterrows():
-    count = len(filtered_logs[filtered_logs['الاسم'] == student['الاسم']])
-    pct = f"{(count / days_in_period * 100):.1f}%" if days_in_period > 0 else "0%"
-    
-    rep_data.append({
-        "الاسم": student['الاسم'],
-        "المسجد": student['المسجد'],
-        "المرحلة الدراسية": student['المرحلة الدراسية'],
-        "أيام الحضور للفترة": count,
-        "النسبة المئوية": pct
-    })
+            rep_data.append({
+                "الاسم": student['الاسم'],
+                "المسجد": student['المسجد'],
+                "المرحلة الدراسية": student['المرحلة الدراسية'],
+                "أيام الحضور للفترة": count,
+                "النسبة المئوية": pct
+            })
 
-res_df = pd.DataFrame(rep_data)
-res_df = res_df.sort_values(by="الاسم")
-res_df = res_df[["الاسم", "المسجد", "المرحلة الدراسية", "أيام الحضور للفترة", "النسبة المئوية"]]
-"الاسم",
-    "المسجد",
-    "المرحلة الدراسية",
-    "أيام الحضور للفترة",
-    "النسبة المئوية",
-]]
-                    st.table(res_df)
-                    csv = res_df.to_csv(index=False).encode('utf-8-sig')
-                    st.download_button("📥 تحميل التقرير الشامل (Excel / CSV)", csv, f"تقرير_مفصل_{target_cat}.csv", "text/csv", use_container_width=True)
-                else:
-                    st.info("لا توجد سجلات حضور بعد.")
+        # تحويل التقرير ل DataFrame وترتيبه أبجديًا
+        res_df = pd.DataFrame(rep_data)
+        res_df = res_df.sort_values(by="الاسم")
+        res_df = res_df[["الاسم", "المسجد", "المرحلة الدراسية", "أيام الحضور للفترة", "النسبة المئوية"]]
+
+        # عرض الجدول
+        st.table(res_df)
+
+        # زر تحميل CSV
+        csv = res_df.to_csv(index=False).encode('utf-8-sig')
+        st.download_button(
+            "📥 تحميل التقرير الشامل (Excel / CSV)",
+            csv,
+            f"تقرير_مفصل_{datetime.now().strftime('%Y-%m-%d')}.csv",
+            "text/csv",
+            use_container_width=True
+        )
+
+    else:
+        st.info("لا توجد سجلات حضور بعد.")
