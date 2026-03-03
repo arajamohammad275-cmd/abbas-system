@@ -220,9 +220,7 @@ with tab_admin:
 if st.button("🔍 تجهيز التقرير التفصيلي", use_container_width=True):
     if not l_list.empty:
 # تأكد أن التاريخ بصيغة datetime
-l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coerce")
-
-mask = (
+l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coerce")mask = 
     (l_list["التاريخ"] >= pd.to_datetime(date_from)) &
     (l_list["التاريخ"] <= pd.to_datetime(date_to))
 )
