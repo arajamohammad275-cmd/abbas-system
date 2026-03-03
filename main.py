@@ -138,7 +138,7 @@ with tab_stats:
         else:
             display_df["النسبة المئوية"] = "0%"
 
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
+        st.table(display_df)
 # --- التبويب الثاني: بوابة المشرف ---
 with tab_admin:
     pwd = st.text_input("أدخل كلمة المرور لدخول المشرف:", type="password")
