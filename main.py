@@ -100,9 +100,26 @@ with tab_stats:
         
         display_df = m_list.copy()
         display_df['أيام الحضور'] = display_df['الاسم'].apply(lambda x: len(l_list[l_list['الاسم'] == x]) if not l_list.empty and 'الاسم' in l_list.columns else 0)
-        display_df['النسبة المئوية'] = display_df['أيام الحضور'].apply(lambda x: f"{(x / total_activity_days * 100):.1f}%" if total_activity_days > 0 else "0%")
+# ===== حساب النسبة بشكل صحيح وواضح =====
+if total_activity_days > 0:
+    display_df['النسبة المئوية'] = (
+        (display_df['أيام الحضور'] / total_activity_days * 100)
+        .round(1)
+        .astype(str) + " %"
+    )
+else:
+    display_df['النسبة المئوية'] = "0 %"
+
+# ===== عرض الجدول بمحاذاة يمين واضحة =====
+styled_df = display_df[["الاسم", "المسجد", "أيام الحضور", "النسبة المئوية"]]\
+    .style.set_properties(**{'text-align': 'right'})
+
+st.dataframe(
+    styled_df,
+    use_container_width=True,
+    hide_index=True
+)        
         
-        st.dataframe(display_df[["الاسم", "المسجد", "أيام الحضور", "النسبة المئوية"]], use_container_width=True, hide_index=True)
     else:
         st.info("لا توجد بيانات لهذه الفئة حالياً.")
 
