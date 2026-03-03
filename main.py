@@ -221,9 +221,9 @@ with tab_admin:
 
 if st.button("🔍 تجهيز التقرير التفصيلي", use_container_width=True):
                
-    
-   if not l_list.empty:
-                    # تأكد أن التاريخ بصيغة datetime
+  
+      if not l_list.empty:
+        # تأكد أن التاريخ بصيغة datetime    
 
 
 mask = (l_list['التاريخ'] >= str(date_from)) & (l_list['التاريخ'] <= str(date_to))
