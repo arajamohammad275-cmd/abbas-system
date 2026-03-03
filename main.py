@@ -237,6 +237,13 @@ with tab_admin:
                         })
                     
                     res_df = pd.DataFrame(rep_data)
+                    res_df = res_df[[
+    "النسبة المئوية",
+    "أيام الحضور للفترة",
+    "الاسم",
+    "المسجد",
+    "المرحلة الدراسية"
+]]
                     st.dataframe(res_df, use_container_width=True, hide_index=True)
                     csv = res_df.to_csv(index=False).encode('utf-8-sig')
                     st.download_button("📥 تحميل التقرير الشامل (Excel / CSV)", csv, f"تقرير_مفصل_{target_cat}.csv", "text/csv", use_container_width=True)
