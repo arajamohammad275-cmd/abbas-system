@@ -218,15 +218,13 @@ with tab_admin:
             date_to = d2.date_input("إلى تاريخ", datetime.now())
             
 if st.button("🔍 تجهيز التقرير التفصيلي", use_container_width=True):
+
     if not l_list.empty:
-# تأكد أن التاريخ بصيغة datetime
-# تأكد أن التاريخ بصيغة datetime
-l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coerce")
 
-# إنشاء فلتر للتواريخ
-mask = (l_list["التاريخ"] >= pd.to_datetime(date_from)) & (l_list["التاريخ"] <= pd.to_datetime(date_to))
+        # تحويل التاريخ لصيغة datetime
+        l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coerce")
 
-# تصفية السجلات حسب التاريخ
+        # تصفية السجلات حسب التاريخ
         mask = (l_list["التاريخ"] >= pd.to_datetime(date_from)) & \
                (l_list["التاريخ"] <= pd.to_datetime(date_to))
         filtered_logs = l_list[mask]
