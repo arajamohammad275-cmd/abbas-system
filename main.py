@@ -248,7 +248,8 @@ for _, student in m_list.iterrows():
 res_df = pd.DataFrame(rep_data)
 res_df = res_df.sort_values(by="الاسم")
 res_df = res_df[["الاسم", "المسجد", "المرحلة الدراسية", "أيام الحضور للفترة", "النسبة المئوية"]]
-    "الاسم",
+ 
+"الاسم",
     "المسجد",
     "المرحلة الدراسية",
     "أيام الحضور للفترة",
