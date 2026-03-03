@@ -242,7 +242,7 @@ with tab_admin:
     "المسجد",
     "المرحلة الدراسية",
     "الفئة",
-    "النسبة المئوية"
+    "النسبة المئوية",
 ]]
                     st.table(res_df)
                     csv = res_df.to_csv(index=False).encode('utf-8-sig')
