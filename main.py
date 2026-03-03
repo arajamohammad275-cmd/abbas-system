@@ -238,11 +238,11 @@ with tab_admin:
                     
                     res_df = pd.DataFrame(rep_data)
                     res_df = res_df[[
-    "النسبة المئوية",
-    "أيام الحضور للفترة",
     "الاسم",
     "المسجد",
-    "المرحلة الدراسية"
+    "المرحلة الدراسية",
+    "الفئة",
+    "النسبة المئوية"
 ]]
                     st.table(res_df)
                     csv = res_df.to_csv(index=False).encode('utf-8-sig')
