@@ -4,7 +4,7 @@ import requests
 from datetime import datetime
 
 # -----------------------------
-# إعادة التشغيل الآمن
+# إعادة التشغيل الآمن بعد التفاعل
 # -----------------------------
 if 'rerun_flag' not in st.session_state:
     st.session_state['rerun_flag'] = False
@@ -13,7 +13,7 @@ if st.session_state['rerun_flag']:
     st.experimental_rerun()
 
 # -----------------------------
-# 1. إعدادات الصفحة
+# إعدادات الصفحة
 # -----------------------------
 st.set_page_config(page_title="نظام حضور الأنشطة", layout="centered")
 
@@ -30,7 +30,7 @@ READ_M_BASE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=ou
 READ_L_BASE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Logs"
 
 # -----------------------------
-# 2. تصميم RTL
+# تصميم RTL
 # -----------------------------
 st.markdown("""
 <style>
@@ -51,7 +51,7 @@ label { text-align:right !important; width:100%; display:block !important; font-
 """, unsafe_allow_html=True)
 
 # -----------------------------
-# 3. جلب البيانات
+# جلب البيانات
 # -----------------------------
 @st.cache_data(ttl=5)
 def fetch_data_secure():
@@ -120,9 +120,10 @@ with tab_admin:
                         if selected:
                             recs=[{"name":n,"category":target_cat,"date":str(today)} for n in selected]
                             requests.post(API_URL,json={"action":"add_attendance","records":recs})
+                            # إضافة للحضور المحلي
                             for n in selected:
                                 st.session_state['local_logs']=pd.concat([st.session_state['local_logs'],pd.DataFrame([{'الاسم':n,'الفئة':target_cat,'التاريخ':today}])],ignore_index=True)
-                            st.session_state['rerun_flag']=True
+                            st.session_state['rerun_flag']=True  # إعادة تشغيل آمنة
 
         # إضافة وحذف الطلاب
         with sub2:
@@ -135,14 +136,14 @@ with tab_admin:
                         requests.post(API_URL,json={"action":"add_student","name":name_in,"mosque":msq_in,"grade":lvl_in,"category":target_cat})
                         new_student=pd.DataFrame([{"الاسم":name_in,"المسجد":msq_in,"المرحلة الدراسية":lvl_in,"الفئة":target_cat}])
                         st.session_state['local_students']=pd.concat([st.session_state['local_students'],new_student],ignore_index=True)
-                        st.session_state['rerun_flag']=True
+                        st.session_state['rerun_flag']=True  # إعادة تشغيل آمنة
 
             del_n=st.selectbox("اختر الاسم المراد حذفه:",[""]+sorted(m_list['الاسم'].tolist()) if not m_list.empty else [""])
             if st.button("تأكيد الحذف النهائي", use_container_width=True):
                 if del_n:
                     requests.post(API_URL,json={"action":"delete_student","name":del_n,"category":target_cat})
                     st.session_state['local_students']=st.session_state['local_students'][st.session_state['local_students']['الاسم']!=del_n]
-                    st.session_state['rerun_flag']=True
+                    st.session_state['rerun_flag']=True  # إعادة تشغيل آمنة
 
         # التقارير التفصيلية
         with sub3:
