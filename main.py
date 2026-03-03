@@ -217,13 +217,10 @@ with tab_admin:
             date_from = d1.date_input("من تاريخ", datetime.now())
             date_to = d2.date_input("إلى تاريخ", datetime.now())
             
-             
-
 if st.button("🔍 تجهيز التقرير التفصيلي", use_container_width=True):
     if not l_list.empty:
         # تأكد أن التاريخ بصيغة datetime    
-             mask = (l_list['التاريخ'] >= str(date_from)) & (l_list['التاريخ'] <= str(date_to))
-                    filtered_logs = l_list[mask]
+             mask = (l_list['التاريخ'] >= str(date_from)) & (l_list['التاريخ'] <= str(date_to)) filtered_logs = l_list[mask]
                     days_in_period = len(filtered_logs['التاريخ'].unique()) if not filtered_logs.empty else 0
                     
                     rep_data = []
