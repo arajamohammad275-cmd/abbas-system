@@ -167,7 +167,6 @@ with tab_stats:
             use_container_width=True,
             hide_index=True
         )
-
 else:
         st.info("لا توجد بيانات لهذه الفئة حالياً.")
 # --- التبويب الثاني: بوابة المشرف ---
