@@ -155,20 +155,12 @@ with tab_stats:
         display_df["أيام الحضور"] = display_df["الاسم"].apply(calculate_attendance)
 
         # حساب النسبة المئوية بطريقة صحيحة
-        if total_activity_days > 0:
-            display_df["النسبة المئوية"] = (
-                (display_df["أيام الحضور"] / total_activity_days) * 100
-            ).round(1).astype(str) + "%"
-        else:
-            display_df["النسبة المئوية"] = "0%"
-
-        st.dataframe(
-            display_df[["الاسم", "المسجد", "أيام الحضور", "النسبة المئوية"]],
-            use_container_width=True,
-            hide_index=True
-        )
-else:
-        st.info("لا توجد بيانات لهذه الفئة حالياً.")
+        display_df["النسبة المئوية"] = (
+    (display_df["أيام الحضور"] / total_activity_days * 100)
+    .fillna(0)
+    .round(1)
+    .astype(str) + "%"
+)
 # --- التبويب الثاني: بوابة المشرف ---
 with tab_admin:
     pwd = st.text_input("أدخل كلمة المرور لدخول المشرف:", type="password")
