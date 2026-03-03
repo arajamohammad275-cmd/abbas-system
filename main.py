@@ -98,15 +98,10 @@ with tab_stats:
         c1.markdown(f'<div class="metric-card"><h3>👥 طلاب الفئة</h3><h2>{len(m_list)}</h2></div>', unsafe_allow_html=True)
         c2.markdown(f'<div class="metric-card"><h3>📅 أيام النشاط</h3><h2>{total_activity_days}</h2></div>', unsafe_allow_html=True)
         
-        display_df = m_list.copy()
-        display_df['أيام الحضور'] = display_df['الاسم'].apply(lambda x: len(l_list[l_list['الاسم'] == x]) if not l_list.empty and 'الاسم' in l_list.columns else 0)
-# ===== حساب النسبة بشكل صحيح وواضح =====
-if total_activity_days > 0:
-    display_df['النسبة المئوية'] = (
-        (display_df['أيام الحضور'] / total_activity_days * 100)
-        .round(1)
-        .astype(str) + " %"
-    )
+       display_df['النسبة المئوية'] = display_df['أيام الحضور'].apply(lambda x: f"{(x / total_activity_days * 100):.1f}%" if total_activity_days > 0 else "0%")
+
+st.dataframe(display_df[["الاسم", "المسجد", "أيام الحضور", "النسبة المئوية"]], use_container_width=True, hide_index=True)
+
 else:
     display_df['النسبة المئوية'] = "0 %"
 
