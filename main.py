@@ -97,7 +97,7 @@ with tab_stats:
         if not l_list.empty and "التاريخ" in l_list.columns:
             l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coerce")
             total_activity_days = l_list["التاريخ"].nunique()
-        :else
+        else:
             total_activity_days = 0
 
         c1, c2 = st.columns(2)
