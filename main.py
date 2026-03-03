@@ -90,22 +90,48 @@ m_list = df_m[df_m['الفئة'] == target_cat] if not df_m.empty else pd.DataFr
 l_list = df_l[df_l['الفئة'] == target_cat] if not df_l.empty else pd.DataFrame()
 
 # --- التبويب الأول: الكشف العام ---
+# --- التبويب الأول: الكشف العام ---
 with tab_stats:
     if not m_list.empty:
-        total_activity_days = len(l_list["التاريخ"].unique()) if not l_list.empty and "التاريخ" in l_list.columns else 0
-        
+
+        # التأكد من وجود بيانات وسجلات
+        if not l_list.empty and "التاريخ" in l_list.columns:
+            l_list["التاريخ"] = pd.to_datetime(l_list["التاريخ"], errors="coerce")
+            total_activity_days = l_list["التاريخ"].nunique()
+        else:
+            total_activity_days = 0
+
         c1, c2 = st.columns(2)
         c1.markdown(f'<div class="metric-card"><h3>👥 طلاب الفئة</h3><h2>{len(m_list)}</h2></div>', unsafe_allow_html=True)
         c2.markdown(f'<div class="metric-card"><h3>📅 أيام النشاط</h3><h2>{total_activity_days}</h2></div>', unsafe_allow_html=True)
-        
+
         display_df = m_list.copy()
-        display_df['أيام الحضور'] = display_df['الاسم'].apply(lambda x: len(l_list[l_list['الاسم'] == x]) if not l_list.empty and 'الاسم' in l_list.columns else 0)
-        display_df['النسبة المئوية'] = display_df['أيام الحضور'].apply(lambda x: f"{(x / total_activity_days * 100):.1f}%" if total_activity_days > 0 else "0%")
-        
-        st.dataframe(display_df[["الاسم", "المسجد", "أيام الحضور", "النسبة المئوية"]], use_container_width=True, hide_index=True)
+
+        # حساب أيام الحضور الفعلية (أيام فريدة لكل طالب)
+        def calculate_attendance(student_name):
+            if not l_list.empty and "الاسم" in l_list.columns:
+                student_logs = l_list[l_list["الاسم"] == student_name]
+                return student_logs["التاريخ"].nunique()
+            return 0
+
+        display_df["أيام الحضور"] = display_df["الاسم"].apply(calculate_attendance)
+
+        # حساب النسبة المئوية بطريقة صحيحة
+        if total_activity_days > 0:
+            display_df["النسبة المئوية"] = (
+                (display_df["أيام الحضور"] / total_activity_days) * 100
+            ).round(1).astype(str) + "%"
+        else:
+            display_df["النسبة المئوية"] = "0%"
+
+        st.dataframe(
+            display_df[["الاسم", "المسجد", "أيام الحضور", "النسبة المئوية"]],
+            use_container_width=True,
+            hide_index=True
+        )
+
     else:
         st.info("لا توجد بيانات لهذه الفئة حالياً.")
-
 # --- التبويب الثاني: بوابة المشرف ---
 with tab_admin:
     pwd = st.text_input("أدخل كلمة المرور لدخول المشرف:", type="password")
