@@ -14,7 +14,7 @@ if 'local_students' not in st.session_state:
     st.session_state['local_students'] = pd.DataFrame(columns=["الاسم", "المسجد", "المرحلة الدراسية", "الفئة"])
 
 # روابط جوجل شيت
-API_URL = "https://script.google.com/macros/s/AKfycbxwpiAyguMMZugESiw_QPiNA5t_MWr5YKqYOtwSoS_RfubNovE7QvRkhjmzr03dnIBtIA/exec"
+API_URL = "https://script.google.com/macros/s/AKfycbwOmrsgy9KAexkbINwyS6VTT-i6OMOPZTZkRnbQL5HMrno83H7WIYjTTU9xWFdB_tmEhg/exec"
 SHEET_ID = "19p75R69A5cvtwvRnyt1WIWjiqWAEX9GozAHjCzCNqww"
 READ_M_BASE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Students"
 READ_L_BASE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Logs"
