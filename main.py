@@ -16,50 +16,49 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # -----------------------------
-# RTL + تصميم (مع تثبيت لون النص أبيض على الموبايل + إصلاح الدروب داون)
+# RTL + تصميم (نهائي: موقع أبيض + حقول سوداء + دروب داون سوداء)
 # -----------------------------
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
 * { font-family: 'Cairo', sans-serif !important; direction: rtl !important; text-align: right !important; }
 
-/* خلفية وألوان عامة */
+/* خلفية وألوان عامة للموقع */
 .stApp { background-color: #0f172a; color: #f8fafc !important; }
 
-/* اجبار لون النص أبيض على كل الأجهزة (خصوصاً الموبايل) */
-html, body, [class*="css"], .stApp, .stMarkdown, .stText, p, span, div, label {
-  color: #f8fafc !important;
-}
-
-/* حقول الإدخال والاختيار (القيمة المختارة داخل الحقل) */
-input, textarea, select,
-.stTextInput input,
-.stSelectbox div, .stSelectbox span,
-.stDateInput input,
-.stMultiSelect div, .stMultiSelect span {
-  color: #f8fafc !important;
-  -webkit-text-fill-color: #f8fafc !important; /* مهم للموبايل */
-  caret-color: #f8fafc !important;
-}
-
-/* جداول Streamlit */
-table, th, td {
-  color: #f8fafc !important;
-}
-
-/* نصوص داخل عناصر Streamlit */
+/* اجبار لون النص أبيض على كل عناصر الصفحة (ما عدا الحقول/القوائم) */
 [data-testid="stMarkdownContainer"] * ,
-[data-testid="stSelectbox"] * ,
-[data-testid="stTextInput"] * ,
-[data-testid="stDateInput"] * ,
-[data-testid="stDataFrame"] * ,
-[data-testid="stTable"] * {
+.stMarkdown, .stText, p, span, div, label, h1, h2, h3, h4, h5, h6 {
   color: #f8fafc !important;
-  -webkit-text-fill-color: #f8fafc !important;
+}
+
+/* ===== الحقول والقوائم: خلفية بيضاء + نص أسود ===== */
+input, textarea, select {
+  color: #0b1220 !important;
+  -webkit-text-fill-color: #0b1220 !important;
+  caret-color: #0b1220 !important;
+  background: #ffffff !important;
+}
+
+/* Streamlit widgets: selected value + typed text */
+[data-testid="stTextInput"] input,
+[data-testid="stTextArea"] textarea,
+[data-testid="stSelectbox"] div,
+[data-testid="stMultiSelect"] div,
+[data-testid="stDateInput"] input {
+  color: #0b1220 !important;
+  -webkit-text-fill-color: #0b1220 !important;
+  background: #ffffff !important;
+}
+
+/* نص placeholder داخل الحقول يكون رمادي واضح */
+[data-testid="stTextInput"] input::placeholder,
+[data-testid="stTextArea"] textarea::placeholder {
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280 !important;
 }
 
 /* ===== Fix dropdown menu items (white bg + black text) ===== */
-/* النص داخل القائمة المنسدلة عند فتحها */
 div[data-baseweb="popover"] *,
 ul[role="listbox"] *,
 div[role="listbox"] * {
@@ -67,19 +66,16 @@ div[role="listbox"] * {
   -webkit-text-fill-color: #0b1220 !important;
 }
 
-/* خلفية القائمة المنسدلة */
 div[data-baseweb="popover"],
 ul[role="listbox"],
 div[role="listbox"] {
   background: #ffffff !important;
 }
 
-/* خلفية الخيار */
 li[role="option"] {
   background: #ffffff !important;
 }
 
-/* hover + selected */
 li[role="option"]:hover,
 li[role="option"][aria-selected="true"] {
   background: #e5e7eb !important;
@@ -87,7 +83,10 @@ li[role="option"][aria-selected="true"] {
   -webkit-text-fill-color: #0b1220 !important;
 }
 
-/* شكل الهيدر */
+/* ===== جداول Streamlit ===== */
+table, th, td { color: #f8fafc !important; }
+
+/* ===== الهيدر ===== */
 .header-box { 
   background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%); 
   padding:2rem; border-radius:20px; border:1px solid #334155; 
@@ -101,6 +100,8 @@ li[role="option"][aria-selected="true"] {
   font-size:2.8rem; font-weight:900; margin:0; 
   text-align:center !important;
 }
+
+/* ===== الأزرار ===== */
 .stButton>button{
   border-radius:12px;
   background:linear-gradient(90deg,#3b82f6,#2563eb);
