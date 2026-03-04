@@ -38,30 +38,55 @@ st.markdown("""
   -webkit-text-fill-color: #f8fafc !important;
 }
 
-/* ===== الحقول والقوائم: خلفية بيضاء + نص أسود ===== */
-input, textarea, select {
+/* =========================
+   FIX شامل لكل الحقول (BaseWeb + Streamlit)
+   الهدف: الخانة أبيض + النص أسود + placeholder رمادي
+   ========================= */
+
+/* كل input/textarea بشكل عام */
+input, textarea {
   color: #0b1220 !important;
   -webkit-text-fill-color: #0b1220 !important;
   caret-color: #0b1220 !important;
   background: #ffffff !important;
 }
 
-/* Streamlit widgets: selected value + typed text */
-[data-testid="stTextInput"] input,
-[data-testid="stTextArea"] textarea,
-[data-testid="stSelectbox"] div,
-[data-testid="stMultiSelect"] div,
-[data-testid="stDateInput"] input {
+/* BaseWeb inputs (اللي داخل الفورم غالباً) */
+div[data-baseweb="input"] input,
+div[data-baseweb="textarea"] textarea {
+  background: #ffffff !important;
   color: #0b1220 !important;
   -webkit-text-fill-color: #0b1220 !important;
+}
+
+/* Containers الخاصة بالـ select/multi/date */
+div[data-baseweb="select"] > div,
+div[data-testid="stDateInput"] div[data-baseweb="input"] > div,
+div[data-testid="stTextInput"] div[data-baseweb="input"] > div,
+div[data-testid="stTextArea"] div[data-baseweb="textarea"] > div {
   background: #ffffff !important;
 }
 
-/* نص placeholder داخل الحقول يكون رمادي واضح */
-[data-testid="stTextInput"] input::placeholder,
-[data-testid="stTextArea"] textarea::placeholder {
+/* قيمة المختار داخل select/multi تكون سوداء */
+div[data-baseweb="select"] * {
+  color: #0b1220 !important;
+  -webkit-text-fill-color: #0b1220 !important;
+}
+
+/* placeholder داخل input/textarea */
+input::placeholder,
+textarea::placeholder,
+div[data-baseweb="input"] input::placeholder,
+div[data-baseweb="textarea"] textarea::placeholder {
   color: #6b7280 !important;
   -webkit-text-fill-color: #6b7280 !important;
+}
+
+/* Date input تحديداً (يصير واضح) */
+[data-testid="stDateInput"] input {
+  background: #ffffff !important;
+  color: #0b1220 !important;
+  -webkit-text-fill-color: #0b1220 !important;
 }
 
 /* ===== Fix dropdown menu items (white bg + black text) ===== */
@@ -93,17 +118,17 @@ li[role="option"][aria-selected="true"] {
 table, th, td { color: #f8fafc !important; }
 
 /* ===== الهيدر ===== */
-.header-box { 
-  background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%); 
-  padding:2rem; border-radius:20px; border:1px solid #334155; 
-  margin-bottom:2rem; text-align:center !important; 
+.header-box {
+  background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
+  padding:2rem; border-radius:20px; border:1px solid #334155;
+  margin-bottom:2rem; text-align:center !important;
   box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);
 }
-.main-title { 
-  background: linear-gradient(90deg,#38bdf8,#818cf8); 
-  -webkit-background-clip:text; 
-  -webkit-text-fill-color:transparent; 
-  font-size:2.8rem; font-weight:900; margin:0; 
+.main-title {
+  background: linear-gradient(90deg,#38bdf8,#818cf8);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  font-size:2.8rem; font-weight:900; margin:0;
   text-align:center !important;
 }
 
@@ -217,6 +242,11 @@ PASSWORDS = {
 
 target_cat = st.selectbox("📂 اختر الفئة:", list(PASSWORDS.keys()))
 
+# ✅ عرض رسالة نجاح تسجيل الحضور حتى بعد rerun
+if st.session_state.get("ATT_OK_MSG"):
+    st.success(st.session_state["ATT_OK_MSG"])
+    st.session_state["ATT_OK_MSG"] = ""
+
 df_students = fetch_students_df()
 df_logs = fetch_attendance_df()
 
@@ -228,6 +258,9 @@ l_list = df_logs[df_logs["category"] == norm_text(target_cat)].copy() if not df_
 
 tab_stats, tab_admin = st.tabs(["📊 كشف الالتزام","🔐 بوابة المشرف"])
 
+# =============================
+# كشف الالتزام (بدون أيام الحضور في الجدول)
+# =============================
 with tab_stats:
     if m_list.empty:
         st.info("لا توجد طلاب في هذه الفئة.")
@@ -242,18 +275,23 @@ with tab_stats:
                 return 0
             return l_list[l_list["name"] == norm_text(student_name)]["date"].dt.date.nunique()
 
-        m_list["أيام الحضور"] = m_list["name"].apply(days_present)
+        m_list["_أيام_الحضور"] = m_list["name"].apply(days_present)
         m_list["النسبة المئوية"] = (
-            (m_list["أيام الحضور"] / total_days * 100).round(1).astype(str) + "%"
+            (m_list["_أيام_الحضور"] / total_days * 100).round(1).astype(str) + "%"
             if total_days > 0 else "0%"
         )
 
-        st.table(m_list[["name","mosque","grade","أيام الحضور","النسبة المئوية"]].rename(columns={
-            "name":"الاسم",
-            "mosque":"المسجد",
-            "grade":"المرحلة الدراسية"
-        }))
+        st.table(
+            m_list[["name","mosque","grade","النسبة المئوية"]].rename(columns={
+                "name":"الاسم",
+                "mosque":"المسجد",
+                "grade":"المرحلة الدراسية"
+            })
+        )
 
+# =============================
+# بوابة المشرف
+# =============================
 with tab_admin:
     pwd = st.text_input("أدخل كلمة المرور:", type="password")
 
@@ -262,16 +300,27 @@ with tab_admin:
 
         sub1, sub2, sub3 = st.tabs(["📝 تسجيل الحضور","➕ إدارة الطلاب","📥 التقارير التفصيلية"])
 
+        # -----------------------------
+        # تسجيل الحضور (يمسح الصحّات بعد الاعتماد)
+        # -----------------------------
         with sub1:
             if m_list.empty:
                 st.info("لا يوجد طلاب لهذه الفئة بعد. أضف طلاب من تبويب (إدارة الطلاب).")
             else:
-                attendance_day = st.date_input("اختر تاريخ الحضور:", datetime.now().date(), key=f"att_date_{target_cat}")
+                attendance_day = st.date_input(
+                    "اختر تاريخ الحضور:",
+                    datetime.now().date(),
+                    key=f"att_date_{target_cat}"
+                )
 
                 st.write("اختر الحاضرين:")
                 selected_students = []
+                checkbox_keys = []
+
                 for n in m_list["name"].tolist():
-                    if st.checkbox(n, key=f"att_{target_cat}_{attendance_day}_{n}"):
+                    k = f"att_{target_cat}_{attendance_day}_{n}"
+                    checkbox_keys.append(k)
+                    if st.checkbox(n, key=k):
                         selected_students.append(n)
 
                 if st.button("✅ اعتماد كشف الحضور", use_container_width=True):
@@ -279,9 +328,17 @@ with tab_admin:
                         st.warning("الرجاء اختيار طالب واحد على الأقل.")
                     else:
                         add_attendance_bulk(selected_students, target_cat, attendance_day)
-                        st.success("تم تسجيل الحضور بنجاح ✅")
+
+                        for k in checkbox_keys:
+                            if k in st.session_state:
+                                st.session_state[k] = False
+
+                        st.session_state["ATT_OK_MSG"] = "تم اعتماد كشف الحضور ✅"
                         clear_cache_and_rerun()
 
+        # -----------------------------
+        # إدارة الطلاب
+        # -----------------------------
         with sub2:
             with st.form(key=f"add_student_{target_cat}", clear_on_submit=True):
                 name_in = st.text_input("الاسم الثلاثي")
@@ -312,6 +369,9 @@ with tab_admin:
                     st.success("تم حذف الطالب ✅")
                     clear_cache_and_rerun()
 
+        # -----------------------------
+        # التقارير التفصيلية
+        # -----------------------------
         with sub3:
             if m_list.empty:
                 st.info("لا يوجد طلاب في هذه الفئة.")
