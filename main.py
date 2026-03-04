@@ -248,7 +248,6 @@ with tab_stats:
             if total_days > 0 else "0%"
         )
 
-        # (إن أردت حذف عمود أيام الحضور من كشف الالتزام، أخبرني)
         st.table(m_list[["name","mosque","grade","أيام الحضور","النسبة المئوية"]].rename(columns={
             "name":"الاسم",
             "mosque":"المسجد",
@@ -263,28 +262,16 @@ with tab_admin:
 
         sub1, sub2, sub3 = st.tabs(["📝 تسجيل الحضور","➕ إدارة الطلاب","📥 التقارير التفصيلية"])
 
-        # -----------------------------
-        # ✅ تسجيل الحضور (تمت إضافة مسح الصحّات بعد الاعتماد)
-        # -----------------------------
         with sub1:
             if m_list.empty:
                 st.info("لا يوجد طلاب لهذه الفئة بعد. أضف طلاب من تبويب (إدارة الطلاب).")
             else:
-                attendance_day = st.date_input(
-                    "اختر تاريخ الحضور:",
-                    datetime.now().date(),
-                    key=f"att_date_{target_cat}"
-                )
+                attendance_day = st.date_input("اختر تاريخ الحضور:", datetime.now().date(), key=f"att_date_{target_cat}")
 
                 st.write("اختر الحاضرين:")
                 selected_students = []
-                checkbox_keys = []
-
                 for n in m_list["name"].tolist():
-                    k = f"att_{target_cat}_{attendance_day}_{n}"
-                    checkbox_keys.append(k)
-
-                    if st.checkbox(n, key=k):
+                    if st.checkbox(n, key=f"att_{target_cat}_{attendance_day}_{n}"):
                         selected_students.append(n)
 
                 if st.button("✅ اعتماد كشف الحضور", use_container_width=True):
@@ -292,15 +279,7 @@ with tab_admin:
                         st.warning("الرجاء اختيار طالب واحد على الأقل.")
                     else:
                         add_attendance_bulk(selected_students, target_cat, attendance_day)
-
-                        # ✅ مسح كل الصحّات بعد الاعتماد
-                        for k in checkbox_keys:
-                            if k in st.session_state:
-                                st.session_state[k] = False
-
-                        st.success("تم اعتماد كشف الحضور ✅")
-
-                        # تحديث البيانات/التقارير بعد الاعتماد
+                        st.success("تم تسجيل الحضور بنجاح ✅")
                         clear_cache_and_rerun()
 
         with sub2:
