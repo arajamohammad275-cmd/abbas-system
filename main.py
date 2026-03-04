@@ -16,7 +16,7 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # -----------------------------
-# RTL + تصميم (مع تثبيت لون النص أبيض على الموبايل)
+# RTL + تصميم (مع تثبيت لون النص أبيض على الموبايل + إصلاح الدروب داون)
 # -----------------------------
 st.markdown("""
 <style>
@@ -31,7 +31,7 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stText, p, span, div, label {
   color: #f8fafc !important;
 }
 
-/* حقول الإدخال والاختيار */
+/* حقول الإدخال والاختيار (القيمة المختارة داخل الحقل) */
 input, textarea, select,
 .stTextInput input,
 .stSelectbox div, .stSelectbox span,
@@ -58,6 +58,36 @@ table, th, td {
   -webkit-text-fill-color: #f8fafc !important;
 }
 
+/* ===== Fix dropdown menu items (white bg + black text) ===== */
+/* النص داخل القائمة المنسدلة عند فتحها */
+div[data-baseweb="popover"] *,
+ul[role="listbox"] *,
+div[role="listbox"] * {
+  color: #0b1220 !important;
+  -webkit-text-fill-color: #0b1220 !important;
+}
+
+/* خلفية القائمة المنسدلة */
+div[data-baseweb="popover"],
+ul[role="listbox"],
+div[role="listbox"] {
+  background: #ffffff !important;
+}
+
+/* خلفية الخيار */
+li[role="option"] {
+  background: #ffffff !important;
+}
+
+/* hover + selected */
+li[role="option"]:hover,
+li[role="option"][aria-selected="true"] {
+  background: #e5e7eb !important;
+  color: #0b1220 !important;
+  -webkit-text-fill-color: #0b1220 !important;
+}
+
+/* شكل الهيدر */
 .header-box { 
   background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%); 
   padding:2rem; border-radius:20px; border:1px solid #334155; 
@@ -180,7 +210,6 @@ PASSWORDS = {
 
 target_cat = st.selectbox("📂 اختر الفئة:", list(PASSWORDS.keys()))
 
-# جلب البيانات
 df_students = fetch_students_df()
 df_logs = fetch_attendance_df()
 
@@ -192,9 +221,6 @@ l_list = df_logs[df_logs["category"] == norm_text(target_cat)].copy() if not df_
 
 tab_stats, tab_admin = st.tabs(["📊 كشف الالتزام","🔐 بوابة المشرف"])
 
-# =============================
-# كشف الالتزام والنسب
-# =============================
 with tab_stats:
     if m_list.empty:
         st.info("لا توجد طلاب في هذه الفئة.")
@@ -221,9 +247,6 @@ with tab_stats:
             "grade":"المرحلة الدراسية"
         }))
 
-# =============================
-# بوابة المشرف
-# =============================
 with tab_admin:
     pwd = st.text_input("أدخل كلمة المرور:", type="password")
 
@@ -232,7 +255,6 @@ with tab_admin:
 
         sub1, sub2, sub3 = st.tabs(["📝 تسجيل الحضور","➕ إدارة الطلاب","📥 التقارير التفصيلية"])
 
-        # تسجيل الحضور
         with sub1:
             if m_list.empty:
                 st.info("لا يوجد طلاب لهذه الفئة بعد. أضف طلاب من تبويب (إدارة الطلاب).")
@@ -253,7 +275,6 @@ with tab_admin:
                         st.success("تم تسجيل الحضور بنجاح ✅")
                         clear_cache_and_rerun()
 
-        # إدارة الطلاب
         with sub2:
             with st.form(key=f"add_student_{target_cat}", clear_on_submit=True):
                 name_in = st.text_input("الاسم الثلاثي")
@@ -284,7 +305,6 @@ with tab_admin:
                     st.success("تم حذف الطالب ✅")
                     clear_cache_and_rerun()
 
-        # التقارير التفصيلية
         with sub3:
             if m_list.empty:
                 st.info("لا يوجد طلاب في هذه الفئة.")
