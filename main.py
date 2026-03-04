@@ -16,57 +16,130 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # -----------------------------
-# RTL + تصميم
+# RTL + تصميم (نهائي)
 # -----------------------------
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
 * { font-family: 'Cairo', sans-serif !important; direction: rtl !important; text-align: right !important; }
+
+/* خلفية وألوان عامة للموقع */
 .stApp { background-color: #0f172a; color: #f8fafc !important; }
 
+/* اجبار لون النص أبيض على عناصر الصفحة (غير الحقول) */
 [data-testid="stMarkdownContainer"] * ,
 .stMarkdown, .stText, p, span, div, label, h1, h2, h3, h4, h5, h6 {
   color: #f8fafc !important;
 }
 
+/* ✅ عناوين الحقول (Labels) خليها دايمًا أبيض وواضح */
 [data-testid="stWidgetLabel"] * {
   color: #f8fafc !important;
   -webkit-text-fill-color: #f8fafc !important;
 }
 
-/* الحقول: خلفية بيضاء + نص أسود */
-input, textarea { color:#0b1220 !important; -webkit-text-fill-color:#0b1220 !important; background:#ffffff !important; }
-div[data-baseweb="select"] * { color:#0b1220 !important; -webkit-text-fill-color:#0b1220 !important; }
-div[data-baseweb="popover"] *, ul[role="listbox"] *, div[role="listbox"] * { color:#0b1220 !important; -webkit-text-fill-color:#0b1220 !important; }
-div[data-baseweb="popover"], ul[role="listbox"], div[role="listbox"] { background:#ffffff !important; }
-li[role="option"]:hover, li[role="option"][aria-selected="true"] { background:#e5e7eb !important; }
+/* =========================
+   FIX شامل لكل الحقول (BaseWeb + Streamlit)
+   الهدف: الخانة أبيض + النص أسود + placeholder رمادي
+   ========================= */
 
-/* الجداول */
+/* كل input/textarea بشكل عام */
+input, textarea {
+  color: #0b1220 !important;
+  -webkit-text-fill-color: #0b1220 !important;
+  caret-color: #0b1220 !important;
+  background: #ffffff !important;
+}
+
+/* BaseWeb inputs (اللي داخل الفورم غالباً) */
+div[data-baseweb="input"] input,
+div[data-baseweb="textarea"] textarea {
+  background: #ffffff !important;
+  color: #0b1220 !important;
+  -webkit-text-fill-color: #0b1220 !important;
+}
+
+/* Containers الخاصة بالـ select/multi/date */
+div[data-baseweb="select"] > div,
+div[data-testid="stDateInput"] div[data-baseweb="input"] > div,
+div[data-testid="stTextInput"] div[data-baseweb="input"] > div,
+div[data-testid="stTextArea"] div[data-baseweb="textarea"] > div {
+  background: #ffffff !important;
+}
+
+/* قيمة المختار داخل select/multi تكون سوداء */
+div[data-baseweb="select"] * {
+  color: #0b1220 !important;
+  -webkit-text-fill-color: #0b1220 !important;
+}
+
+/* placeholder داخل input/textarea */
+input::placeholder,
+textarea::placeholder,
+div[data-baseweb="input"] input::placeholder,
+div[data-baseweb="textarea"] textarea::placeholder {
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280 !important;
+}
+
+/* Date input تحديداً (يصير واضح) */
+[data-testid="stDateInput"] input {
+  background: #ffffff !important;
+  color: #0b1220 !important;
+  -webkit-text-fill-color: #0b1220 !important;
+}
+
+/* ===== Fix dropdown menu items (white bg + black text) ===== */
+div[data-baseweb="popover"] *,
+ul[role="listbox"] *,
+div[role="listbox"] * {
+  color: #0b1220 !important;
+  -webkit-text-fill-color: #0b1220 !important;
+}
+
+div[data-baseweb="popover"],
+ul[role="listbox"],
+div[role="listbox"] {
+  background: #ffffff !important;
+}
+
+li[role="option"] {
+  background: #ffffff !important;
+}
+
+li[role="option"]:hover,
+li[role="option"][aria-selected="true"] {
+  background: #e5e7eb !important;
+  color: #0b1220 !important;
+  -webkit-text-fill-color: #0b1220 !important;
+}
+
+/* ===== جداول Streamlit ===== */
 table, th, td { color: #f8fafc !important; }
 
-/* الهيدر */
+/* ===== الهيدر ===== */
 .header-box {
   background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
   padding:2rem; border-radius:20px; border:1px solid #334155;
-  margin-bottom:1.5rem; text-align:center !important;
+  margin-bottom:2rem; text-align:center !important;
   box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);
 }
 .main-title {
   background: linear-gradient(90deg,#38bdf8,#818cf8);
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
-  font-size:2.4rem; font-weight:900; margin:0;
+  font-size:2.8rem; font-weight:900; margin:0;
   text-align:center !important;
 }
 
-/* الأزرار */
+/* ===== الأزرار ===== */
 .stButton>button{
   border-radius:12px;
   background:linear-gradient(90deg,#3b82f6,#2563eb);
   color:white !important;
   font-weight:bold;
   width:100%;
-  height:3.2rem;
+  height:3.5rem;
   border:none;
 }
 </style>
@@ -82,13 +155,21 @@ def norm_text(x) -> str:
         return ""
     return str(x).strip()
 
+def clear_cache_and_rerun():
+    try:
+        st.cache_data.clear()
+    except Exception:
+        pass
+    st.rerun()
+
 # -----------------------------
 # جلب البيانات
 # -----------------------------
 @st.cache_data(ttl=10)
 def fetch_students_df() -> pd.DataFrame:
     res = supabase.table("students").select("*").execute()
-    df = pd.DataFrame(res.data or [])
+    data = res.data or []
+    df = pd.DataFrame(data)
     if df.empty:
         return pd.DataFrame(columns=["id", "name", "mosque", "grade", "category"])
     for col in ["name", "mosque", "grade", "category"]:
@@ -99,7 +180,8 @@ def fetch_students_df() -> pd.DataFrame:
 @st.cache_data(ttl=10)
 def fetch_attendance_df() -> pd.DataFrame:
     res = supabase.table("attendance").select("*").execute()
-    df = pd.DataFrame(res.data or [])
+    data = res.data or []
+    df = pd.DataFrame(data)
     if df.empty:
         return pd.DataFrame(columns=["id", "name", "category", "date"])
     for col in ["name", "category"]:
@@ -123,44 +205,63 @@ def delete_student_from_db(student_id: int):
 def add_attendance_bulk(names: list[str], category: str, attendance_day: date):
     if not names:
         return
-    recs = [{"name": norm_text(n), "category": norm_text(category), "date": str(attendance_day)} for n in names]
-    supabase.table("attendance").insert(recs).execute()
+
+    existing = supabase.table("attendance").select("name,date,category").eq("category", norm_text(category)).execute()
+    existing_df = pd.DataFrame(existing.data or [])
+    if not existing_df.empty:
+        existing_df["name"] = existing_df["name"].apply(norm_text)
+        existing_df["category"] = existing_df["category"].apply(norm_text)
+        existing_df["date"] = pd.to_datetime(existing_df["date"], errors="coerce").dt.date
+        existing_set = set(
+            (r["name"], r["category"], r["date"])
+            for _, r in existing_df.iterrows()
+            if pd.notna(r["date"])
+        )
+    else:
+        existing_set = set()
+
+    recs = []
+    for n in names:
+        key = (norm_text(n), norm_text(category), attendance_day)
+        if key not in existing_set:
+            recs.append({"name": norm_text(n), "category": norm_text(category), "date": str(attendance_day)})
+
+    if recs:
+        supabase.table("attendance").insert(recs).execute()
 
 # -----------------------------
 # كلمات المرور
 # -----------------------------
 PASSWORDS = {
-    "فئة أشبال السالمية":"Salmiya2026",
-    "فئة أشبال حولي":"Hawally2026",
-    "فئة الفتية":"Fetya2026",
-    "فئة الشباب":"Shabab2026",
-    "فئة الجامعيين":"Uni2026"
+    "فئة أشبال السالمية": "Salmiya2026",
+    "فئة أشبال حولي": "Hawally2026",
+    "فئة الفتية": "Fetya2026",
+    "فئة الشباب": "Shabab2026",
+    "فئة الجامعيين": "Uni2026"
 }
 
 target_cat = st.selectbox("📂 اختر الفئة:", list(PASSWORDS.keys()))
 
+# ✅ رسائل نجاح بعد rerun
+if st.session_state.get("ATT_OK_MSG"):
+    st.success(st.session_state["ATT_OK_MSG"])
+    st.session_state["ATT_OK_MSG"] = ""
+
 df_students = fetch_students_df()
 df_logs = fetch_attendance_df()
+
+df_students["category"] = df_students["category"].apply(norm_text) if "category" in df_students.columns else ""
+df_logs["category"] = df_logs["category"].apply(norm_text) if "category" in df_logs.columns else ""
 
 m_list = df_students[df_students["category"] == norm_text(target_cat)].sort_values(by="name", ignore_index=True) if not df_students.empty else pd.DataFrame()
 l_list = df_logs[df_logs["category"] == norm_text(target_cat)].copy() if not df_logs.empty else pd.DataFrame()
 
-# -----------------------------
-# التبويبات الرئيسية
-# -----------------------------
-main_page = st.radio(
-    "التنقل",
-    ["📊 كشف الالتزام", "🔐 بوابة المشرف"],
-    index=0 if st.session_state.get("MAIN_PAGE", "📊 كشف الالتزام") == "📊 كشف الالتزام" else 1,
-    horizontal=True,
-    label_visibility="collapsed",
-    key="MAIN_PAGE",
-)
+tab_stats, tab_admin = st.tabs(["📊 كشف الالتزام", "🔐 بوابة المشرف"])
 
 # =============================
-# كشف الالتزام (بدون أيام الحضور)
+# كشف الالتزام (بدون أيام الحضور في الجدول)
 # =============================
-if main_page == "📊 كشف الالتزام":
+with tab_stats:
     if m_list.empty:
         st.info("لا توجد طلاب في هذه الفئة.")
     else:
@@ -174,114 +275,111 @@ if main_page == "📊 كشف الالتزام":
                 return 0
             return l_list[l_list["name"] == norm_text(student_name)]["date"].dt.date.nunique()
 
-        m_list["_days"] = m_list["name"].apply(days_present)
+        m_list["_أيام_الحضور"] = m_list["name"].apply(days_present)
         m_list["النسبة المئوية"] = (
-            (m_list["_days"] / total_days * 100).round(1).astype(str) + "%"
+            (m_list["_أيام_الحضور"] / total_days * 100).round(1).astype(str) + "%"
             if total_days > 0 else "0%"
         )
 
         st.table(
-            m_list[["name","mosque","grade","النسبة المئوية"]].rename(columns={
-                "name":"الاسم",
-                "mosque":"المسجد",
-                "grade":"المرحلة الدراسية"
+            m_list[["name", "mosque", "grade", "النسبة المئوية"]].rename(columns={
+                "name": "الاسم",
+                "mosque": "المسجد",
+                "grade": "المرحلة الدراسية"
             })
         )
 
 # =============================
 # بوابة المشرف
 # =============================
-else:
+with tab_admin:
     pwd = st.text_input("أدخل كلمة المرور:", type="password")
-
-    if pwd != "" and pwd != PASSWORDS.get(target_cat):
-        st.error("كلمة المرور غير صحيحة ❌")
 
     if pwd == PASSWORDS.get(target_cat):
         st.success("تم تسجيل الدخول ✅")
 
-        # ✅ بديل tabs: Radio ثابت يحافظ على نفس الصفحة بعد أي rerun (خصوصًا بالموبايل)
-        if "ADMIN_PAGE" not in st.session_state:
-            st.session_state["ADMIN_PAGE"] = "📝 تسجيل الحضور"
-
-        admin_page = st.radio(
-            "لوحة المشرف",
-            ["📝 تسجيل الحضور", "➕ إدارة الطلاب", "📥 التقارير التفصيلية"],
-            index=["📝 تسجيل الحضور", "➕ إدارة الطلاب", "📥 التقارير التفصيلية"].index(st.session_state["ADMIN_PAGE"]),
-            horizontal=True,
-            key="ADMIN_PAGE",
-        )
-
-        # مكان رسائل نجاح داخل نفس الصفحة (يضلّك بنفس المكان)
-        msg_box = st.empty()
+        sub1, sub2, sub3 = st.tabs(["📝 تسجيل الحضور", "➕ إدارة الطلاب", "📥 التقارير التفصيلية"])
 
         # -----------------------------
-        # تسجيل الحضور
+        # تسجيل الحضور (يمسح الصحّات بعد الاعتماد) - FIX بدون Error
         # -----------------------------
-        if admin_page == "📝 تسجيل الحضور":
+        with sub1:
             if m_list.empty:
-                st.info("لا يوجد طلاب لهذه الفئة بعد. أضف طلاب من (إدارة الطلاب).")
+                st.info("لا يوجد طلاب لهذه الفئة بعد. أضف طلاب من تبويب (إدارة الطلاب).")
             else:
-                attendance_day = st.date_input("اختر تاريخ الحضور:", datetime.now().date(), key=f"att_date_{target_cat}")
+                attendance_day = st.date_input(
+                    "اختر تاريخ الحضور:",
+                    datetime.now().date(),
+                    key=f"att_date_{target_cat}"
+                )
+
+                # ✅ RESET للـ checkboxes قبل رسمها (حتى ما يصير StreamlitAPIException)
+                if st.session_state.get("RESET_ATT") and st.session_state.get("RESET_KEYS"):
+                    for k in st.session_state["RESET_KEYS"]:
+                        st.session_state[k] = False
+                    st.session_state["RESET_ATT"] = False
+                    st.session_state["RESET_KEYS"] = []
 
                 st.write("اختر الحاضرين:")
                 selected_students = []
+                checkbox_keys = []
 
-                # ✅ مفتاح ثابت لكل فئة+تاريخ (حتى ما يخرب)
                 for n in m_list["name"].tolist():
                     k = f"att_{target_cat}_{attendance_day}_{n}"
+                    checkbox_keys.append(k)
                     if st.checkbox(n, key=k):
                         selected_students.append(n)
 
                 if st.button("✅ اعتماد كشف الحضور", use_container_width=True):
                     if not selected_students:
-                        msg_box.warning("الرجاء اختيار طالب واحد على الأقل.")
+                        st.warning("الرجاء اختيار طالب واحد على الأقل.")
                     else:
                         add_attendance_bulk(selected_students, target_cat, attendance_day)
 
-                        # ✅ صفّر الصحّات بدون تغيير الصفحة
-                        for n in m_list["name"].tolist():
-                            k = f"att_{target_cat}_{attendance_day}_{n}"
-                            if k in st.session_state:
-                                st.session_state[k] = False
+                        # ✅ بدل ما نعدل القيم الآن (يسبب Error)، نخليها تتصفّر بالرّن القادم
+                        st.session_state["RESET_ATT"] = True
+                        st.session_state["RESET_KEYS"] = checkbox_keys
 
-                        st.cache_data.clear()
-                        msg_box.success("تم اعتماد كشف الحضور ✅")
+                        st.session_state["ATT_OK_MSG"] = "تم اعتماد كشف الحضور ✅"
+                        clear_cache_and_rerun()
 
         # -----------------------------
         # إدارة الطلاب
         # -----------------------------
-        elif admin_page == "➕ إدارة الطلاب":
+        with sub2:
             with st.form(key=f"add_student_{target_cat}", clear_on_submit=True):
                 name_in = st.text_input("الاسم الثلاثي")
-                msq_in = st.selectbox("المسجد",["شاهه العبيد","اليوسفين","العسعوسي","السهو","فاطمه الغلوم","الصقعبي","الرشيد","الرومي"])
-                lvl_in = st.selectbox("المرحلة الدراسية",["الرابع","الخامس","السادس","السابع","الثامن","التاسع","العاشر","الحادي عشر","الثاني عشر","جامعي"])
+                msq_in = st.selectbox("المسجد", ["شاهه العبيد", "اليوسفين", "العسعوسي", "السهو", "فاطمه الغلوم", "الصقعبي", "الرشيد", "الرومي"])
+                lvl_in = st.selectbox("المرحلة الدراسية", ["الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر", "الحادي عشر", "الثاني عشر", "جامعي"])
                 submit_add = st.form_submit_button("إضافة الطالب", use_container_width=True)
 
             if submit_add:
                 if not norm_text(name_in):
-                    msg_box.warning("الرجاء إدخال الاسم.")
+                    st.warning("الرجاء إدخال الاسم.")
                 else:
                     add_student_to_db(name_in, msq_in, lvl_in, target_cat)
-                    st.cache_data.clear()
-                    msg_box.success(f"تمت إضافة {norm_text(name_in)} ✅")
+                    st.success(f"تمت إضافة {norm_text(name_in)} ✅")
+                    clear_cache_and_rerun()
 
             st.divider()
 
             if m_list.empty:
                 st.info("لا يوجد طلاب لحذفهم.")
             else:
-                options = [(int(r["id"]), f'{r["name"]} - {r["mosque"]} - {r["grade"]}') for _, r in m_list.iterrows()]
+                options = [
+                    (int(r["id"]), f'{r["name"]} - {r["mosque"]} - {r["grade"]}')
+                    for _, r in m_list.iterrows()
+                ]
                 chosen = st.selectbox("اختر الطالب لحذفه:", options=options, format_func=lambda x: x[1], key=f"del_{target_cat}")
                 if st.button("🗑️ حذف الطالب", use_container_width=True):
                     delete_student_from_db(chosen[0])
-                    st.cache_data.clear()
-                    msg_box.success("تم حذف الطالب ✅")
+                    st.success("تم حذف الطالب ✅")
+                    clear_cache_and_rerun()
 
         # -----------------------------
         # التقارير التفصيلية
         # -----------------------------
-        else:
+        with sub3:
             if m_list.empty:
                 st.info("لا يوجد طلاب في هذه الفئة.")
             else:
@@ -329,3 +427,6 @@ else:
                         "text/csv",
                         use_container_width=True
                     )
+
+    elif pwd:
+        st.error("كلمة المرور غير صحيحة ❌")
