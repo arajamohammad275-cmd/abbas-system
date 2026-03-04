@@ -35,7 +35,6 @@ st.markdown('<div class="header-box"><h1 class="main-title">نظام حضور ا
 # -----------------------------
 # جلب البيانات
 # -----------------------------
-@st.cache_data(ttl=10)
 def fetch_students():
 
     res = supabase.table("students").select("*").execute()
@@ -46,7 +45,6 @@ def fetch_students():
     return pd.DataFrame(columns=["name","mosque","grade","category"])
 
 
-@st.cache_data(ttl=10)
 def fetch_attendance():
 
     res = supabase.table("attendance").select("*").execute()
