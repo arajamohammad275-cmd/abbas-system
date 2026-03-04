@@ -1,3 +1,5 @@
+print("APP VERSION 2")
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime
