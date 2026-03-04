@@ -1,359 +1,504 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, date
-from supabase import create_client
+from supabase import create_client, Client
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from typing import List, Dict
 
-# -----------------------------
-# إعدادات الصفحة
-# -----------------------------
-st.set_page_config(page_title="نظام حضور الأنشطة", layout="centered")
+# =============================
+# APP CONFIG
+# =============================
+APP_TZ = "Asia/Kuwait"
 
-# -----------------------------
-# Supabase (من Streamlit Secrets فقط)
-# -----------------------------
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+st.set_page_config(
+    page_title="نظام تسجيل حضور الطلاب",
+    page_icon="📚",
+    layout="wide",
+)
 
-# -----------------------------
-# RTL + تصميم (نهائي: موقع أبيض + حقول سوداء + دروب داون سوداء)
-# -----------------------------
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-* { font-family: 'Cairo', sans-serif !important; direction: rtl !important; text-align: right !important; }
+# (اختياري) تحسين عرض العربية (RTL)
+st.markdown(
+    """
+    <style>
+      html, body, [class*="css"]  { direction: rtl; }
+      .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+      .stTabs [data-baseweb="tab"] { padding: 10px 14px; }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-/* خلفية وألوان عامة للموقع */
-.stApp { background-color: #0f172a; color: #f8fafc !important; }
+st.title("📚 نظام تسجيل حضور الطلاب")
+st.caption("لوحة تحكم لإدارة الطلاب وتسجيل حضورهم داخل المسجد (Streamlit + Supabase).")
 
-/* اجبار لون النص أبيض على كل عناصر الصفحة (ما عدا الحقول/القوائم) */
-[data-testid="stMarkdownContainer"] * ,
-.stMarkdown, .stText, p, span, div, label, h1, h2, h3, h4, h5, h6 {
-  color: #f8fafc !important;
-}
+# =============================
+# HELPERS
+# =============================
+def today_kuwait():
+    return datetime.now(ZoneInfo(APP_TZ)).date()
 
-/* ===== الحقول والقوائم: خلفية بيضاء + نص أسود ===== */
-input, textarea, select {
-  color: #0b1220 !important;
-  -webkit-text-fill-color: #0b1220 !important;
-  caret-color: #0b1220 !important;
-  background: #ffffff !important;
-}
+def safe_rerun():
+    """Compatibility helper across Streamlit versions."""
+    if hasattr(st, "rerun"):
+        st.rerun()
+    else:
+        st.experimental_rerun()
 
-/* Streamlit widgets: selected value + typed text */
-[data-testid="stTextInput"] input,
-[data-testid="stTextArea"] textarea,
-[data-testid="stSelectbox"] div,
-[data-testid="stMultiSelect"] div,
-[data-testid="stDateInput"] input {
-  color: #0b1220 !important;
-  -webkit-text-fill-color: #0b1220 !important;
-  background: #ffffff !important;
-}
-
-/* نص placeholder داخل الحقول يكون رمادي واضح */
-[data-testid="stTextInput"] input::placeholder,
-[data-testid="stTextArea"] textarea::placeholder {
-  color: #6b7280 !important;
-  -webkit-text-fill-color: #6b7280 !important;
-}
-
-/* ===== Fix dropdown menu items (white bg + black text) ===== */
-div[data-baseweb="popover"] *,
-ul[role="listbox"] *,
-div[role="listbox"] * {
-  color: #0b1220 !important;
-  -webkit-text-fill-color: #0b1220 !important;
-}
-
-div[data-baseweb="popover"],
-ul[role="listbox"],
-div[role="listbox"] {
-  background: #ffffff !important;
-}
-
-li[role="option"] {
-  background: #ffffff !important;
-}
-
-li[role="option"]:hover,
-li[role="option"][aria-selected="true"] {
-  background: #e5e7eb !important;
-  color: #0b1220 !important;
-  -webkit-text-fill-color: #0b1220 !important;
-}
-
-/* ===== جداول Streamlit ===== */
-table, th, td { color: #f8fafc !important; }
-
-/* ===== الهيدر ===== */
-.header-box { 
-  background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%); 
-  padding:2rem; border-radius:20px; border:1px solid #334155; 
-  margin-bottom:2rem; text-align:center !important; 
-  box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);
-}
-.main-title { 
-  background: linear-gradient(90deg,#38bdf8,#818cf8); 
-  -webkit-background-clip:text; 
-  -webkit-text-fill-color:transparent; 
-  font-size:2.8rem; font-weight:900; margin:0; 
-  text-align:center !important;
-}
-
-/* ===== الأزرار ===== */
-.stButton>button{
-  border-radius:12px;
-  background:linear-gradient(90deg,#3b82f6,#2563eb);
-  color:white !important;
-  font-weight:bold;
-  width:100%;
-  height:3.5rem;
-  border:none;
-}
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown('<div class="header-box"><h1 class="main-title">نظام حضور الأنشطة</h1></div>', unsafe_allow_html=True)
-
-# -----------------------------
-# أدوات مساعدة
-# -----------------------------
-def norm_text(x) -> str:
-    if x is None:
-        return ""
-    return str(x).strip()
-
-def clear_cache_and_rerun():
+def clear_app_cache():
+    """Clear cached data so new inserts appear immediately."""
     try:
-        st.cache_data.clear()
+        fetch_students.clear()
     except Exception:
         pass
-    st.rerun()
+    try:
+        fetch_reports.clear()
+    except Exception:
+        pass
 
-# -----------------------------
-# جلب البيانات
-# -----------------------------
-@st.cache_data(ttl=10)
-def fetch_students_df() -> pd.DataFrame:
-    res = supabase.table("students").select("*").execute()
-    data = res.data or []
+# =============================
+# SUPABASE CLIENT (CACHED RESOURCE)
+# =============================
+@st.cache_resource(show_spinner=False)
+def get_supabase() -> Client:
+    # Using Streamlit secrets (required)
+    url = st.secrets.get("SUPABASE_URL")
+    key = st.secrets.get("SUPABASE_KEY")
+
+    if not url or not key:
+        raise RuntimeError(
+            "مفاتيح Supabase غير موجودة. تأكد من إضافة SUPABASE_URL و SUPABASE_KEY داخل st.secrets."
+        )
+
+    # Initialize Supabase client (official approach) :contentReference[oaicite:3]{index=3}
+    return create_client(url, key)
+
+# =============================
+# REQUIRED FUNCTIONS
+# =============================
+
+@st.cache_data(ttl=60, show_spinner=False)
+def fetch_students() -> pd.DataFrame:
+    """Fetch students from 'students' table."""
+    supabase = get_supabase()
+    res = (
+        supabase.table("students")
+        .select("id,name,mosque,grade,category")
+        .order("name")
+        .execute()
+    )
+    data = getattr(res, "data", None) or []
     df = pd.DataFrame(data)
-    if df.empty:
-        return pd.DataFrame(columns=["id", "name", "mosque", "grade", "category"])
+
+    # Normalize columns (avoid KeyErrors)
     for col in ["name", "mosque", "grade", "category"]:
         if col in df.columns:
-            df[col] = df[col].apply(norm_text)
+            df[col] = df[col].fillna("").astype(str)
+
     return df
 
-@st.cache_data(ttl=10)
-def fetch_attendance_df() -> pd.DataFrame:
-    res = supabase.table("attendance").select("*").execute()
-    data = res.data or []
-    df = pd.DataFrame(data)
-    if df.empty:
-        return pd.DataFrame(columns=["id", "name", "category", "date"])
-    for col in ["name", "category"]:
-        if col in df.columns:
-            df[col] = df[col].apply(norm_text)
-    if "date" in df.columns:
-        df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    return df
+def add_student(name: str, mosque: str, grade: str, category: str) -> None:
+    """Insert a new student into 'students' table and refresh caches."""
+    supabase = get_supabase()
+    payload = {
+        "name": (name or "").strip(),
+        "mosque": (mosque or "").strip(),
+        "grade": (grade or "").strip(),
+        "category": category,
+    }
+    supabase.table("students").insert(payload).execute()
+    clear_app_cache()
 
-def add_student_to_db(name: str, mosque: str, grade: str, category: str):
-    supabase.table("students").insert({
-        "name": norm_text(name),
-        "mosque": norm_text(mosque),
-        "grade": norm_text(grade),
-        "category": norm_text(category),
-    }).execute()
+def save_attendance(att_rows: List[Dict]) -> int:
+    """
+    Save attendance records into 'attendance' table.
+    att_rows example: [{"name": "...", "category": "...", "date": "YYYY-MM-DD"}, ...]
+    """
+    if not att_rows:
+        return 0
 
-def delete_student_from_db(student_id: int):
-    supabase.table("students").delete().eq("id", student_id).execute()
+    supabase = get_supabase()
 
-def add_attendance_bulk(names: list[str], category: str, attendance_day: date):
-    if not names:
-        return
+    # Insert supports list for bulk insert :contentReference[oaicite:4]{index=4}
+    res = supabase.table("attendance").insert(att_rows).execute()
+    data = getattr(res, "data", None) or []
+    clear_app_cache()
+    return len(data) if isinstance(data, list) else len(att_rows)
 
-    existing = supabase.table("attendance").select("name,date,category").eq("category", norm_text(category)).execute()
-    existing_df = pd.DataFrame(existing.data or [])
-    if not existing_df.empty:
-        existing_df["name"] = existing_df["name"].apply(norm_text)
-        existing_df["category"] = existing_df["category"].apply(norm_text)
-        existing_df["date"] = pd.to_datetime(existing_df["date"], errors="coerce").dt.date
-        existing_set = set(
-            (r["name"], r["category"], r["date"])
-            for _, r in existing_df.iterrows()
-            if pd.notna(r["date"])
-        )
-    else:
-        existing_set = set()
+@st.cache_data(ttl=60, show_spinner=False)
+def fetch_reports() -> pd.DataFrame:
+    """
+    Fetch attendance from 'attendance' table and enrich with mosque/grade from students
+    (mosque not stored in attendance schema, so we attach it from students).
+    """
+    supabase = get_supabase()
+    att_res = (
+        supabase.table("attendance")
+        .select("id,name,category,date")
+        .order("date", desc=True)
+        .execute()
+    )
+    att = pd.DataFrame(getattr(att_res, "data", None) or [])
+    if att.empty:
+        return att
 
-    recs = []
-    for n in names:
-        key = (norm_text(n), norm_text(category), attendance_day)
-        if key not in existing_set:
-            recs.append({"name": norm_text(n), "category": norm_text(category), "date": str(attendance_day)})
+    # Enrich with mosque/grade from students (best-effort by name)
+    students = fetch_students()
+    if not students.empty:
+        extra = students[["name", "mosque", "grade"]].drop_duplicates(subset=["name"])
+        att = att.merge(extra, on="name", how="left")
 
-    if recs:
-        supabase.table("attendance").insert(recs).execute()
+    # Parse dates for filtering
+    if "date" in att.columns:
+        att["date_parsed"] = pd.to_datetime(att["date"], errors="coerce").dt.date
+
+    for col in ["name", "category", "mosque", "grade"]:
+        if col in att.columns:
+            att[col] = att[col].fillna("").astype(str)
+
+    return att
+
+# =============================
+# TOP BAR ACTIONS
+# =============================
+top_l, top_r = st.columns([0.82, 0.18])
+with top_r:
+    if st.button("🔄 تحديث البيانات", use_container_width=True):
+        clear_app_cache()
+        safe_rerun()
+
+# =============================
+# MAIN TABS (UI FIX)
+# =============================
+tabs = st.tabs(
+    [
+        "📝 تسجيل الحضور",
+        "➕ إدارة الطلاب",
+        "📊 التقارير التفصيلية",
+    ]
+)
 
 # -----------------------------
-# كلمات المرور
+# TAB 1 - ATTENDANCE
 # -----------------------------
-PASSWORDS = {
-    "فئة أشبال السالمية":"Salmiya2026",
-    "فئة أشبال حولي":"Hawally2026",
-    "فئة الفتية":"Fetya2026",
-    "فئة الشباب":"Shabab2026",
-    "فئة الجامعيين":"Uni2026"
-}
+with tabs[0]:
+    st.subheader("📝 تسجيل الحضور")
 
-target_cat = st.selectbox("📂 اختر الفئة:", list(PASSWORDS.keys()))
+    # Load students with loader
+    try:
+        with st.spinner("جارٍ تحميل قائمة الطلاب..."):
+            students_df = fetch_students()
+    except Exception as e:
+        st.error(f"خطأ في جلب الطلاب من Supabase: {e}")
+        st.stop()
 
-df_students = fetch_students_df()
-df_logs = fetch_attendance_df()
-
-df_students["category"] = df_students["category"].apply(norm_text) if "category" in df_students.columns else ""
-df_logs["category"] = df_logs["category"].apply(norm_text) if "category" in df_logs.columns else ""
-
-m_list = df_students[df_students["category"] == norm_text(target_cat)].sort_values(by="name", ignore_index=True) if not df_students.empty else pd.DataFrame()
-l_list = df_logs[df_logs["category"] == norm_text(target_cat)].copy() if not df_logs.empty else pd.DataFrame()
-
-tab_stats, tab_admin = st.tabs(["📊 كشف الالتزام","🔐 بوابة المشرف"])
-
-with tab_stats:
-    if m_list.empty:
-        st.info("لا توجد طلاب في هذه الفئة.")
-    else:
-        if not l_list.empty and "date" in l_list.columns:
-            l_list["date"] = pd.to_datetime(l_list["date"], errors="coerce")
-
-        total_days = l_list["date"].dt.date.nunique() if (not l_list.empty and "date" in l_list.columns) else 0
-
-        def days_present(student_name: str) -> int:
-            if l_list.empty or "date" not in l_list.columns:
-                return 0
-            return l_list[l_list["name"] == norm_text(student_name)]["date"].dt.date.nunique()
-
-        m_list["أيام الحضور"] = m_list["name"].apply(days_present)
-        m_list["النسبة المئوية"] = (
-            (m_list["أيام الحضور"] / total_days * 100).round(1).astype(str) + "%"
-            if total_days > 0 else "0%"
+    if students_df.empty:
+        st.warning(
+            "لا يوجد طلاب ظاهرين من قاعدة البيانات.\n\n"
+            "إذا كنت متأكد أن جدول students يحتوي بيانات، فالغالب السبب هو سياسات RLS في Supabase "
+            "أو استخدام مفتاح لا يملك صلاحية القراءة."
         )
+    else:
+        # Filters row
+        f1, f2, f3, f4, f5 = st.columns([0.22, 0.22, 0.18, 0.18, 0.20])
 
-        st.table(m_list[["name","mosque","grade","أيام الحضور","النسبة المئوية"]].rename(columns={
-            "name":"الاسم",
-            "mosque":"المسجد",
-            "grade":"المرحلة الدراسية"
-        }))
+        categories = sorted([c for c in students_df["category"].unique() if str(c).strip()])
+        mosques = sorted([m for m in students_df["mosque"].unique() if str(m).strip()])
+        grades = sorted([g for g in students_df["grade"].unique() if str(g).strip()])
 
-with tab_admin:
-    pwd = st.text_input("أدخل كلمة المرور:", type="password")
+        with f1:
+            selected_category = st.selectbox(
+                "الفئة",
+                ["الكل"] + categories,
+                index=0,
+            )
 
-    if pwd == PASSWORDS.get(target_cat):
-        st.success("تم تسجيل الدخول ✅")
+        with f2:
+            selected_mosque = st.selectbox(
+                "المسجد",
+                ["الكل"] + mosques,
+                index=0,
+            )
 
-        sub1, sub2, sub3 = st.tabs(["📝 تسجيل الحضور","➕ إدارة الطلاب","📥 التقارير التفصيلية"])
+        with f3:
+            selected_grade = st.selectbox(
+                "الصف",
+                ["الكل"] + grades,
+                index=0,
+            )
 
-        with sub1:
-            if m_list.empty:
-                st.info("لا يوجد طلاب لهذه الفئة بعد. أضف طلاب من تبويب (إدارة الطلاب).")
-            else:
-                attendance_day = st.date_input("اختر تاريخ الحضور:", datetime.now().date(), key=f"att_date_{target_cat}")
+        with f4:
+            attendance_date = st.date_input(
+                "تاريخ الحضور",
+                value=today_kuwait(),
+            )
 
-                st.write("اختر الحاضرين:")
-                selected_students = []
-                for n in m_list["name"].tolist():
-                    if st.checkbox(n, key=f"att_{target_cat}_{attendance_day}_{n}"):
-                        selected_students.append(n)
+        with f5:
+            search_name = st.text_input("بحث بالاسم", placeholder="اكتب جزء من الاسم...")
 
-                if st.button("✅ اعتماد كشف الحضور", use_container_width=True):
-                    if not selected_students:
-                        st.warning("الرجاء اختيار طالب واحد على الأقل.")
-                    else:
-                        add_attendance_bulk(selected_students, target_cat, attendance_day)
-                        st.success("تم تسجيل الحضور بنجاح ✅")
-                        clear_cache_and_rerun()
+        # Apply filters
+        filtered = students_df.copy()
 
-        with sub2:
-            with st.form(key=f"add_student_{target_cat}", clear_on_submit=True):
-                name_in = st.text_input("الاسم الثلاثي")
-                msq_in = st.selectbox("المسجد",["شاهه العبيد","اليوسفين","العسعوسي","السهو","فاطمه الغلوم","الصقعبي","الرشيد","الرومي"])
-                lvl_in = st.selectbox("المرحلة الدراسية",["الرابع","الخامس","السادس","السابع","الثامن","التاسع","العاشر","الحادي عشر","الثاني عشر","جامعي"])
-                submit_add = st.form_submit_button("إضافة الطالب", use_container_width=True)
+        if selected_category != "الكل":
+            filtered = filtered[filtered["category"] == selected_category]
 
-            if submit_add:
-                if not norm_text(name_in):
-                    st.warning("الرجاء إدخال الاسم.")
-                else:
-                    add_student_to_db(name_in, msq_in, lvl_in, target_cat)
-                    st.success(f"تمت إضافة {norm_text(name_in)} ✅")
-                    clear_cache_and_rerun()
+        if selected_mosque != "الكل":
+            filtered = filtered[filtered["mosque"] == selected_mosque]
+
+        if selected_grade != "الكل":
+            filtered = filtered[filtered["grade"] == selected_grade]
+
+        if search_name.strip():
+            filtered = filtered[filtered["name"].str.contains(search_name.strip(), na=False)]
+
+        filtered = filtered.sort_values("name")
+
+        # Stats
+        s1, s2, s3 = st.columns(3)
+        s1.metric("إجمالي الطلاب", int(len(students_df)))
+        s2.metric("الطلاب حسب الفلاتر", int(len(filtered)))
+        s3.metric("تاريخ التسجيل", attendance_date.isoformat())
+
+        st.divider()
+        st.markdown("### ✅ قائمة الطلاب (اختر الحاضرين)")
+
+        if filtered.empty:
+            st.info("لا يوجد طلاب مطابقين للفلاتر الحالية.")
+        else:
+            # Quick actions
+            a1, a2, a3 = st.columns([0.2, 0.2, 0.6])
+            with a1:
+                if st.button("✅ تحديد الكل", use_container_width=True):
+                    for sid in filtered["id"].tolist():
+                        st.session_state[f"present_{sid}"] = True
+                    safe_rerun()
+
+            with a2:
+                if st.button("🧹 إلغاء التحديد", use_container_width=True):
+                    for sid in filtered["id"].tolist():
+                        st.session_state[f"present_{sid}"] = False
+                    safe_rerun()
+
+            # Show checkboxes in 3 columns for better UI
+            col_a, col_b, col_c = st.columns(3)
+
+            def student_label(row):
+                name = row.get("name", "")
+                mosque = row.get("mosque", "")
+                grade = row.get("grade", "")
+                # label without exposing ID, but key uses ID
+                parts = [p for p in [name, grade, mosque] if str(p).strip()]
+                return " — ".join(parts) if parts else str(name)
+
+            for i, (_, row) in enumerate(filtered.iterrows()):
+                sid = row.get("id")
+                key = f"present_{sid}"
+
+                target_col = [col_a, col_b, col_c][i % 3]
+                with target_col:
+                    st.checkbox(student_label(row), key=key)
 
             st.divider()
 
-            if m_list.empty:
-                st.info("لا يوجد طلاب لحذفهم.")
+            # Save attendance
+            if st.button("💾 حفظ الحضور", type="primary", use_container_width=True):
+                present_rows = []
+                for _, row in filtered.iterrows():
+                    sid = row.get("id")
+                    if st.session_state.get(f"present_{sid}", False):
+                        present_rows.append(row)
+
+                if not present_rows:
+                    st.warning("لم يتم اختيار أي طالب كـ حاضر.")
+                else:
+                    attendance_payload = [
+                        {
+                            "name": r["name"],
+                            "category": r["category"],
+                            "date": attendance_date.isoformat(),
+                        }
+                        for r in present_rows
+                    ]
+
+                    try:
+                        with st.spinner("جارٍ حفظ الحضور في قاعدة البيانات..."):
+                            inserted = save_attendance(attendance_payload)
+                        st.success(f"✅ تم حفظ الحضور بنجاح. عدد السجلات المحفوظة: {inserted}")
+                    except Exception as e:
+                        st.error(f"❌ فشل حفظ الحضور: {e}")
+                        st.info(
+                            "إذا كان الخطأ متعلقاً بالصلاحيات، راجع سياسات RLS في Supabase "
+                            "وتأكد أن المفتاح المستخدم يملك صلاحية INSERT على جدول attendance."
+                        )
+
+# -----------------------------
+# TAB 2 - STUDENT MANAGEMENT
+# -----------------------------
+with tabs[1]:
+    st.subheader("➕ إدارة الطلاب")
+
+    left, right = st.columns([0.55, 0.45])
+
+    with left:
+        st.markdown("### إضافة طالب جديد")
+        with st.form("add_student_form", clear_on_submit=True):
+            name = st.text_input("اسم الطالب *")
+            mosque = st.text_input("المسجد")
+            grade = st.text_input("الصف")
+
+            category = st.selectbox(
+                "الفئة *",
+                [
+                    "فئة أشبال السلامية",
+                    "فئة فتيان السلامية",
+                    "فئة شباب السلامية",
+                ],
+            )
+
+            submitted = st.form_submit_button("➕ إضافة الطالب", use_container_width=True)
+
+        if submitted:
+            if not name.strip():
+                st.error("اسم الطالب مطلوب.")
             else:
-                options = [
-                    (int(r["id"]), f'{r["name"]} - {r["mosque"]} - {r["grade"]}')
-                    for _, r in m_list.iterrows()
-                ]
-                chosen = st.selectbox("اختر الطالب لحذفه:", options=options, format_func=lambda x: x[1], key=f"del_{target_cat}")
-                if st.button("🗑️ حذف الطالب", use_container_width=True):
-                    delete_student_from_db(chosen[0])
-                    st.success("تم حذف الطالب ✅")
-                    clear_cache_and_rerun()
-
-        with sub3:
-            if m_list.empty:
-                st.info("لا يوجد طلاب في هذه الفئة.")
-            else:
-                d1, d2 = st.columns(2)
-                date_from = d1.date_input("من تاريخ", datetime.now().date(), key=f"rep_from_{target_cat}")
-                date_to = d2.date_input("إلى تاريخ", datetime.now().date(), key=f"rep_to_{target_cat}")
-
-                if st.button("📊 تجهيز التقرير", use_container_width=True):
-                    all_logs = fetch_attendance_df().copy()
-                    if all_logs.empty:
-                        st.info("لا يوجد سجلات حضور بعد.")
-                        st.stop()
-
-                    all_logs["category"] = all_logs["category"].apply(norm_text)
-                    all_logs = all_logs[all_logs["category"] == norm_text(target_cat)].copy()
-
-                    all_logs["date"] = pd.to_datetime(all_logs["date"], errors="coerce")
-                    mask = (
-                        (all_logs["date"] >= pd.to_datetime(date_from)) &
-                        (all_logs["date"] <= pd.to_datetime(date_to))
-                    )
-                    filtered = all_logs[mask].copy()
-                    days_in_period = filtered["date"].dt.date.nunique() if not filtered.empty else 0
-
-                    rep = []
-                    for _, s in m_list.iterrows():
-                        count_days = filtered[filtered["name"] == s["name"]]["date"].dt.date.nunique() if not filtered.empty else 0
-                        pct = f"{(count_days/days_in_period*100):.1f}%" if days_in_period > 0 else "0%"
-                        rep.append({
-                            "الاسم": s["name"],
-                            "المسجد": s["mosque"],
-                            "المرحلة الدراسية": s["grade"],
-                            "أيام الحضور للفترة": int(count_days),
-                            "النسبة المئوية": pct
-                        })
-
-                    res_df = pd.DataFrame(rep).sort_values(by="الاسم", ignore_index=True)
-                    st.table(res_df)
-
-                    csv = res_df.to_csv(index=False).encode('utf-8-sig')
-                    st.download_button(
-                        "📥 تحميل CSV",
-                        csv,
-                        f"تقرير_مفصل_{target_cat}_{datetime.now().strftime('%Y-%m-%d')}.csv",
-                        "text/csv",
-                        use_container_width=True
+                try:
+                    with st.spinner("جارٍ إضافة الطالب..."):
+                        add_student(name=name, mosque=mosque, grade=grade, category=category)
+                    st.success("✅ تمت إضافة الطالب بنجاح وتم تحديث البيانات مباشرة.")
+                    safe_rerun()
+                except Exception as e:
+                    st.error(f"❌ حدث خطأ أثناء إضافة الطالب: {e}")
+                    st.info(
+                        "إذا كان الخطأ متعلقاً بالصلاحيات، راجع سياسات RLS في Supabase "
+                        "وتأكد من صلاحية INSERT على جدول students."
                     )
 
-    elif pwd:
-        st.error("كلمة المرور غير صحيحة ❌")
+    with right:
+        st.markdown("### قائمة الطلاب الحالية")
+        try:
+            with st.spinner("جارٍ تحميل الطلاب..."):
+                students_df = fetch_students()
+        except Exception as e:
+            st.error(f"خطأ في جلب الطلاب: {e}")
+            students_df = pd.DataFrame()
+
+        if students_df.empty:
+            st.info("لا يوجد طلاب لعرضهم حالياً.")
+        else:
+            # Simple filters for viewing
+            v1, v2 = st.columns(2)
+            with v1:
+                view_category = st.selectbox(
+                    "فلترة حسب الفئة (عرض فقط)",
+                    ["الكل"] + sorted([c for c in students_df["category"].unique() if str(c).strip()]),
+                    index=0,
+                    key="view_cat_students"
+                )
+            with v2:
+                view_mosque = st.selectbox(
+                    "فلترة حسب المسجد (عرض فقط)",
+                    ["الكل"] + sorted([m for m in students_df["mosque"].unique() if str(m).strip()]),
+                    index=0,
+                    key="view_mosque_students"
+                )
+
+            view_df = students_df.copy()
+            if view_category != "الكل":
+                view_df = view_df[view_df["category"] == view_category]
+            if view_mosque != "الكل":
+                view_df = view_df[view_df["mosque"] == view_mosque]
+
+            st.dataframe(view_df, use_container_width=True)
+
+            # Optional export of students list (doesn't remove any feature)
+            csv_students = view_df.to_csv(index=False).encode("utf-8-sig")
+            st.download_button(
+                "تحميل قائمة الطلاب CSV",
+                data=csv_students,
+                file_name="students.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+# -----------------------------
+# TAB 3 - DETAILED REPORTS
+# -----------------------------
+with tabs[2]:
+    st.subheader("📊 التقارير التفصيلية")
+
+    try:
+        with st.spinner("جارٍ تحميل بيانات التقارير..."):
+            reports_df = fetch_reports()
+    except Exception as e:
+        st.error(f"خطأ في جلب التقارير: {e}")
+        st.stop()
+
+    if reports_df.empty:
+        st.info("لا يوجد بيانات حضور في جدول attendance حتى الآن.")
+    else:
+        # Filters
+        r1, r2, r3, r4, r5 = st.columns([0.22, 0.22, 0.22, 0.18, 0.16])
+
+        # Dates
+        min_date = reports_df["date_parsed"].min() if "date_parsed" in reports_df.columns else None
+        max_date = reports_df["date_parsed"].max() if "date_parsed" in reports_df.columns else None
+        default_from = min_date or today_kuwait()
+        default_to = max_date or today_kuwait()
+
+        with r1:
+            date_from = st.date_input("من تاريخ", value=default_from, key="rep_from")
+        with r2:
+            date_to = st.date_input("إلى تاريخ", value=default_to, key="rep_to")
+
+        # Category filter (from attendance records)
+        rep_categories = sorted([c for c in reports_df["category"].unique() if str(c).strip()])
+        with r3:
+            rep_category = st.selectbox("الفئة", ["الكل"] + rep_categories, index=0, key="rep_cat")
+
+        # Mosque filter (enriched from students)
+        mosques = []
+        if "mosque" in reports_df.columns:
+            mosques = sorted([m for m in reports_df["mosque"].unique() if str(m).strip()])
+        with r4:
+            rep_mosque = st.selectbox("المسجد", ["الكل"] + mosques, index=0, key="rep_mosque")
+
+        with r5:
+            rep_search = st.text_input("بحث", placeholder="اسم الطالب...", key="rep_search")
+
+        # Apply filters
+        filtered_rep = reports_df.copy()
+
+        if "date_parsed" in filtered_rep.columns:
+            filtered_rep = filtered_rep[
+                (filtered_rep["date_parsed"] >= date_from) & (filtered_rep["date_parsed"] <= date_to)
+            ]
+
+        if rep_category != "الكل":
+            filtered_rep = filtered_rep[filtered_rep["category"] == rep_category]
+
+        if rep_mosque != "الكل" and "mosque" in filtered_rep.columns:
+            filtered_rep = filtered_rep[filtered_rep["mosque"] == rep_mosque]
+
+        if rep_search.strip():
+            filtered_rep = filtered_rep[filtered_rep["name"].str.contains(rep_search.strip(), na=False)]
+
+        # KPIs
+        k1, k2, k3 = st.columns(3)
+        k1.metric("عدد سجلات الحضور", int(len(filtered_rep)))
+        k2.metric("عدد الطلاب (Unique)", int(filtered_rep["name"].nunique()))
+        if "mosque" in filtered_rep.columns:
+            k3.metric("عدد المساجد (Unique)", int(filtered_rep["mosque"].nunique()))
+        else:
+            k3.metric("عدد المساجد (Unique)", 0)
+
+        st.divider()
+        st.dataframe(filtered_rep, use_container_width=True)
+
+        # Export CSV (UTF-8 with BOM for Excel Arabic)
+        csv = filtered_rep.to_csv(index=False).encode("utf-8-sig")
+        st.download_button(
+            "⬇️ تحميل التقرير CSV",
+            data=csv,
+            file_name="attendance_report.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
