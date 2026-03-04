@@ -78,7 +78,9 @@ div[role="listbox"] {
   background: #ffffff !important;
 }
 
-li[role="option"] { background: #ffffff !important; }
+li[role="option"] {
+  background: #ffffff !important;
+}
 
 li[role="option"]:hover,
 li[role="option"][aria-selected="true"] {
@@ -91,17 +93,17 @@ li[role="option"][aria-selected="true"] {
 table, th, td { color: #f8fafc !important; }
 
 /* ===== الهيدر ===== */
-.header-box {
-  background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
-  padding:2rem; border-radius:20px; border:1px solid #334155;
-  margin-bottom:2rem; text-align:center !important;
+.header-box { 
+  background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%); 
+  padding:2rem; border-radius:20px; border:1px solid #334155; 
+  margin-bottom:2rem; text-align:center !important; 
   box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);
 }
-.main-title {
-  background: linear-gradient(90deg,#38bdf8,#818cf8);
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-  font-size:2.8rem; font-weight:900; margin:0;
+.main-title { 
+  background: linear-gradient(90deg,#38bdf8,#818cf8); 
+  -webkit-background-clip:text; 
+  -webkit-text-fill-color:transparent; 
+  font-size:2.8rem; font-weight:900; margin:0; 
   text-align:center !important;
 }
 
@@ -226,9 +228,6 @@ l_list = df_logs[df_logs["category"] == norm_text(target_cat)].copy() if not df_
 
 tab_stats, tab_admin = st.tabs(["📊 كشف الالتزام","🔐 بوابة المشرف"])
 
-# =============================
-# ✅ كشف الالتزام (تم حذف عمود أيام الحضور من الجدول)
-# =============================
 with tab_stats:
     if m_list.empty:
         st.info("لا توجد طلاب في هذه الفئة.")
@@ -243,26 +242,19 @@ with tab_stats:
                 return 0
             return l_list[l_list["name"] == norm_text(student_name)]["date"].dt.date.nunique()
 
-        # نحسبها داخلياً فقط للنسبة
         m_list["أيام الحضور"] = m_list["name"].apply(days_present)
-
         m_list["النسبة المئوية"] = (
             (m_list["أيام الحضور"] / total_days * 100).round(1).astype(str) + "%"
             if total_days > 0 else "0%"
         )
 
-        # ✅ جدول العرض بدون "أيام الحضور"
-        st.table(
-            m_list[["name","mosque","grade","النسبة المئوية"]].rename(columns={
-                "name":"الاسم",
-                "mosque":"المسجد",
-                "grade":"المرحلة الدراسية"
-            })
-        )
+        # (إن أردت حذف عمود أيام الحضور من كشف الالتزام، أخبرني)
+        st.table(m_list[["name","mosque","grade","أيام الحضور","النسبة المئوية"]].rename(columns={
+            "name":"الاسم",
+            "mosque":"المسجد",
+            "grade":"المرحلة الدراسية"
+        }))
 
-# =============================
-# بوابة المشرف
-# =============================
 with tab_admin:
     pwd = st.text_input("أدخل كلمة المرور:", type="password")
 
@@ -271,16 +263,28 @@ with tab_admin:
 
         sub1, sub2, sub3 = st.tabs(["📝 تسجيل الحضور","➕ إدارة الطلاب","📥 التقارير التفصيلية"])
 
+        # -----------------------------
+        # ✅ تسجيل الحضور (تمت إضافة مسح الصحّات بعد الاعتماد)
+        # -----------------------------
         with sub1:
             if m_list.empty:
                 st.info("لا يوجد طلاب لهذه الفئة بعد. أضف طلاب من تبويب (إدارة الطلاب).")
             else:
-                attendance_day = st.date_input("اختر تاريخ الحضور:", datetime.now().date(), key=f"att_date_{target_cat}")
+                attendance_day = st.date_input(
+                    "اختر تاريخ الحضور:",
+                    datetime.now().date(),
+                    key=f"att_date_{target_cat}"
+                )
 
                 st.write("اختر الحاضرين:")
                 selected_students = []
+                checkbox_keys = []
+
                 for n in m_list["name"].tolist():
-                    if st.checkbox(n, key=f"att_{target_cat}_{attendance_day}_{n}"):
+                    k = f"att_{target_cat}_{attendance_day}_{n}"
+                    checkbox_keys.append(k)
+
+                    if st.checkbox(n, key=k):
                         selected_students.append(n)
 
                 if st.button("✅ اعتماد كشف الحضور", use_container_width=True):
@@ -288,7 +292,15 @@ with tab_admin:
                         st.warning("الرجاء اختيار طالب واحد على الأقل.")
                     else:
                         add_attendance_bulk(selected_students, target_cat, attendance_day)
-                        st.success("تم تسجيل الحضور بنجاح ✅")
+
+                        # ✅ مسح كل الصحّات بعد الاعتماد
+                        for k in checkbox_keys:
+                            if k in st.session_state:
+                                st.session_state[k] = False
+
+                        st.success("تم اعتماد كشف الحضور ✅")
+
+                        # تحديث البيانات/التقارير بعد الاعتماد
                         clear_cache_and_rerun()
 
         with sub2:
