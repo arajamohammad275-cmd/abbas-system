@@ -23,27 +23,18 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
 * { font-family: 'Cairo', sans-serif !important; direction: rtl !important; text-align: right !important; }
 
-/* خلفية وألوان عامة للموقع */
 .stApp { background-color: #0f172a; color: #f8fafc !important; }
 
-/* اجبار لون النص أبيض على عناصر الصفحة (غير الحقول) */
 [data-testid="stMarkdownContainer"] * ,
 .stMarkdown, .stText, p, span, div, label, h1, h2, h3, h4, h5, h6 {
   color: #f8fafc !important;
 }
 
-/* ✅ عناوين الحقول (Labels) خليها دايمًا أبيض وواضح */
 [data-testid="stWidgetLabel"] * {
   color: #f8fafc !important;
   -webkit-text-fill-color: #f8fafc !important;
 }
 
-/* =========================
-   FIX شامل لكل الحقول (BaseWeb + Streamlit)
-   الهدف: الخانة أبيض + النص أسود + placeholder رمادي
-   ========================= */
-
-/* كل input/textarea بشكل عام */
 input, textarea {
   color: #0b1220 !important;
   -webkit-text-fill-color: #0b1220 !important;
@@ -51,7 +42,6 @@ input, textarea {
   background: #ffffff !important;
 }
 
-/* BaseWeb inputs (اللي داخل الفورم غالباً) */
 div[data-baseweb="input"] input,
 div[data-baseweb="textarea"] textarea {
   background: #ffffff !important;
@@ -59,7 +49,6 @@ div[data-baseweb="textarea"] textarea {
   -webkit-text-fill-color: #0b1220 !important;
 }
 
-/* Containers الخاصة بالـ select/multi/date */
 div[data-baseweb="select"] > div,
 div[data-testid="stDateInput"] div[data-baseweb="input"] > div,
 div[data-testid="stTextInput"] div[data-baseweb="input"] > div,
@@ -67,13 +56,11 @@ div[data-testid="stTextArea"] div[data-baseweb="textarea"] > div {
   background: #ffffff !important;
 }
 
-/* قيمة المختار داخل select/multi تكون سوداء */
 div[data-baseweb="select"] * {
   color: #0b1220 !important;
   -webkit-text-fill-color: #0b1220 !important;
 }
 
-/* placeholder داخل input/textarea */
 input::placeholder,
 textarea::placeholder,
 div[data-baseweb="input"] input::placeholder,
@@ -82,14 +69,12 @@ div[data-baseweb="textarea"] textarea::placeholder {
   -webkit-text-fill-color: #6b7280 !important;
 }
 
-/* Date input تحديداً (يصير واضح) */
 [data-testid="stDateInput"] input {
   background: #ffffff !important;
   color: #0b1220 !important;
   -webkit-text-fill-color: #0b1220 !important;
 }
 
-/* ===== Fix dropdown menu items (white bg + black text) ===== */
 div[data-baseweb="popover"] *,
 ul[role="listbox"] *,
 div[role="listbox"] * {
@@ -114,10 +99,8 @@ li[role="option"][aria-selected="true"] {
   -webkit-text-fill-color: #0b1220 !important;
 }
 
-/* ===== جداول Streamlit ===== */
 table, th, td { color: #f8fafc !important; }
 
-/* ===== الهيدر ===== */
 .header-box {
   background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
   padding:2rem; border-radius:20px; border:1px solid #334155;
@@ -132,7 +115,6 @@ table, th, td { color: #f8fafc !important; }
   text-align:center !important;
 }
 
-/* ===== الأزرار ===== */
 .stButton>button{
   border-radius:12px;
   background:linear-gradient(90deg,#3b82f6,#2563eb);
@@ -155,12 +137,21 @@ def norm_text(x) -> str:
         return ""
     return str(x).strip()
 
-def clear_cache_and_rerun():
+def mark_refresh(msg_key: str, msg_value: str):
+    """بدون rerun: نخلي الكاش ينمسح في بداية الرن القادم بشكل طبيعي."""
     try:
         st.cache_data.clear()
     except Exception:
         pass
-    st.rerun()
+    st.session_state[msg_key] = msg_value
+
+# ✅ مسح الكاش مرة وحدة فقط (لو احتجناه) بدون ما نعمل rerun إجباري
+if st.session_state.get("NEED_CACHE_CLEAR"):
+    try:
+        st.cache_data.clear()
+    except Exception:
+        pass
+    st.session_state["NEED_CACHE_CLEAR"] = False
 
 # -----------------------------
 # جلب البيانات
@@ -242,10 +233,18 @@ PASSWORDS = {
 
 target_cat = st.selectbox("📂 اختر الفئة:", list(PASSWORDS.keys()))
 
-# ✅ رسائل نجاح بعد rerun
+# ✅ رسائل نجاح محفوظة بدون rerun إضافي
 if st.session_state.get("ATT_OK_MSG"):
     st.success(st.session_state["ATT_OK_MSG"])
     st.session_state["ATT_OK_MSG"] = ""
+
+if st.session_state.get("STU_OK_MSG"):
+    st.success(st.session_state["STU_OK_MSG"])
+    st.session_state["STU_OK_MSG"] = ""
+
+if st.session_state.get("DEL_OK_MSG"):
+    st.success(st.session_state["DEL_OK_MSG"])
+    st.session_state["DEL_OK_MSG"] = ""
 
 df_students = fetch_students_df()
 df_logs = fetch_attendance_df()
@@ -301,7 +300,7 @@ with tab_admin:
         sub1, sub2, sub3 = st.tabs(["📝 تسجيل الحضور", "➕ إدارة الطلاب", "📥 التقارير التفصيلية"])
 
         # -----------------------------
-        # تسجيل الحضور (يمسح الصحّات بعد الاعتماد) - FIX بدون Error
+        # تسجيل الحضور (يمسح الصحّات بعد الاعتماد) بدون rerun إجباري
         # -----------------------------
         with sub1:
             if m_list.empty:
@@ -313,7 +312,7 @@ with tab_admin:
                     key=f"att_date_{target_cat}"
                 )
 
-                # ✅ RESET للـ checkboxes قبل رسمها (حتى ما يصير StreamlitAPIException)
+                # ✅ RESET للـ checkboxes قبل رسمها (الرن الحالي/القادم بشكل طبيعي)
                 if st.session_state.get("RESET_ATT") and st.session_state.get("RESET_KEYS"):
                     for k in st.session_state["RESET_KEYS"]:
                         st.session_state[k] = False
@@ -336,15 +335,16 @@ with tab_admin:
                     else:
                         add_attendance_bulk(selected_students, target_cat, attendance_day)
 
-                        # ✅ بدل ما نعدل القيم الآن (يسبب Error)، نخليها تتصفّر بالرّن القادم
+                        # ✅ تصفير الصحّات بالرّن القادم الطبيعي (بدون ما ننقلك من الصفحة)
                         st.session_state["RESET_ATT"] = True
                         st.session_state["RESET_KEYS"] = checkbox_keys
 
+                        # ✅ مسح الكاش فقط (بدون rerun إجباري)
+                        st.cache_data.clear()
                         st.session_state["ATT_OK_MSG"] = "تم اعتماد كشف الحضور ✅"
-                        clear_cache_and_rerun()
 
         # -----------------------------
-        # إدارة الطلاب
+        # إدارة الطلاب (بدون ما ينقلك)
         # -----------------------------
         with sub2:
             with st.form(key=f"add_student_{target_cat}", clear_on_submit=True):
@@ -358,8 +358,8 @@ with tab_admin:
                     st.warning("الرجاء إدخال الاسم.")
                 else:
                     add_student_to_db(name_in, msq_in, lvl_in, target_cat)
-                    st.success(f"تمت إضافة {norm_text(name_in)} ✅")
-                    clear_cache_and_rerun()
+                    st.cache_data.clear()
+                    st.session_state["STU_OK_MSG"] = f"تمت إضافة {norm_text(name_in)} ✅"
 
             st.divider()
 
@@ -373,8 +373,8 @@ with tab_admin:
                 chosen = st.selectbox("اختر الطالب لحذفه:", options=options, format_func=lambda x: x[1], key=f"del_{target_cat}")
                 if st.button("🗑️ حذف الطالب", use_container_width=True):
                     delete_student_from_db(chosen[0])
-                    st.success("تم حذف الطالب ✅")
-                    clear_cache_and_rerun()
+                    st.cache_data.clear()
+                    st.session_state["DEL_OK_MSG"] = "تم حذف الطالب ✅"
 
         # -----------------------------
         # التقارير التفصيلية
