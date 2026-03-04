@@ -16,16 +16,70 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # -----------------------------
-# RTL وتصميم (نفس أسلوبك تقريباً)
+# RTL + تصميم (مع تثبيت لون النص أبيض على الموبايل)
 # -----------------------------
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
 * { font-family: 'Cairo', sans-serif !important; direction: rtl !important; text-align: right !important; }
-.stApp { background-color: #0f172a; color: #f8fafc; }
-.header-box { background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%); padding:2rem; border-radius:20px; border:1px solid #334155; margin-bottom:2rem; text-align:center !important; box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);}
-.main-title { background: linear-gradient(90deg,#38bdf8,#818cf8); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-size:2.8rem; font-weight:900; margin:0; text-align:center !important;}
-.stButton>button{border-radius:12px;background:linear-gradient(90deg,#3b82f6,#2563eb);color:white;font-weight:bold;width:100%;height:3.5rem;border:none;}
+
+/* خلفية وألوان عامة */
+.stApp { background-color: #0f172a; color: #f8fafc !important; }
+
+/* اجبار لون النص أبيض على كل الأجهزة (خصوصاً الموبايل) */
+html, body, [class*="css"], .stApp, .stMarkdown, .stText, p, span, div, label {
+  color: #f8fafc !important;
+}
+
+/* حقول الإدخال والاختيار */
+input, textarea, select,
+.stTextInput input,
+.stSelectbox div, .stSelectbox span,
+.stDateInput input,
+.stMultiSelect div, .stMultiSelect span {
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important; /* مهم للموبايل */
+  caret-color: #f8fafc !important;
+}
+
+/* جداول Streamlit */
+table, th, td {
+  color: #f8fafc !important;
+}
+
+/* نصوص داخل عناصر Streamlit */
+[data-testid="stMarkdownContainer"] * ,
+[data-testid="stSelectbox"] * ,
+[data-testid="stTextInput"] * ,
+[data-testid="stDateInput"] * ,
+[data-testid="stDataFrame"] * ,
+[data-testid="stTable"] * {
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+}
+
+.header-box { 
+  background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%); 
+  padding:2rem; border-radius:20px; border:1px solid #334155; 
+  margin-bottom:2rem; text-align:center !important; 
+  box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);
+}
+.main-title { 
+  background: linear-gradient(90deg,#38bdf8,#818cf8); 
+  -webkit-background-clip:text; 
+  -webkit-text-fill-color:transparent; 
+  font-size:2.8rem; font-weight:900; margin:0; 
+  text-align:center !important;
+}
+.stButton>button{
+  border-radius:12px;
+  background:linear-gradient(90deg,#3b82f6,#2563eb);
+  color:white !important;
+  font-weight:bold;
+  width:100%;
+  height:3.5rem;
+  border:none;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -35,7 +89,6 @@ st.markdown('<div class="header-box"><h1 class="main-title">نظام حضور ا
 # أدوات مساعدة
 # -----------------------------
 def norm_text(x) -> str:
-    """تنظيف النصوص من None والمسافات الخفية"""
     if x is None:
         return ""
     return str(x).strip()
@@ -57,7 +110,6 @@ def fetch_students_df() -> pd.DataFrame:
     df = pd.DataFrame(data)
     if df.empty:
         return pd.DataFrame(columns=["id", "name", "mosque", "grade", "category"])
-    # تنظيف
     for col in ["name", "mosque", "grade", "category"]:
         if col in df.columns:
             df[col] = df[col].apply(norm_text)
@@ -70,7 +122,6 @@ def fetch_attendance_df() -> pd.DataFrame:
     df = pd.DataFrame(data)
     if df.empty:
         return pd.DataFrame(columns=["id", "name", "category", "date"])
-    # تنظيف
     for col in ["name", "category"]:
         if col in df.columns:
             df[col] = df[col].apply(norm_text)
@@ -90,13 +141,9 @@ def delete_student_from_db(student_id: int):
     supabase.table("students").delete().eq("id", student_id).execute()
 
 def add_attendance_bulk(names: list[str], category: str, attendance_day: date):
-    """
-    يمنع تكرار نفس الطالب لنفس اليوم (name + category + date)
-    """
     if not names:
         return
 
-    # جلب حضور اليوم للفئة لتجنب التكرار
     existing = supabase.table("attendance").select("name,date,category").eq("category", norm_text(category)).execute()
     existing_df = pd.DataFrame(existing.data or [])
     if not existing_df.empty:
@@ -137,7 +184,6 @@ target_cat = st.selectbox("📂 اختر الفئة:", list(PASSWORDS.keys()))
 df_students = fetch_students_df()
 df_logs = fetch_attendance_df()
 
-# فلترة قوية (تنظيف + مقارنة سليمة)
 df_students["category"] = df_students["category"].apply(norm_text) if "category" in df_students.columns else ""
 df_logs["category"] = df_logs["category"].apply(norm_text) if "category" in df_logs.columns else ""
 
@@ -153,7 +199,6 @@ with tab_stats:
     if m_list.empty:
         st.info("لا توجد طلاب في هذه الفئة.")
     else:
-        # تجهيز logs
         if not l_list.empty and "date" in l_list.columns:
             l_list["date"] = pd.to_datetime(l_list["date"], errors="coerce")
 
@@ -187,9 +232,7 @@ with tab_admin:
 
         sub1, sub2, sub3 = st.tabs(["📝 تسجيل الحضور","➕ إدارة الطلاب","📥 التقارير التفصيلية"])
 
-        # -----------------------------
         # تسجيل الحضور
-        # -----------------------------
         with sub1:
             if m_list.empty:
                 st.info("لا يوجد طلاب لهذه الفئة بعد. أضف طلاب من تبويب (إدارة الطلاب).")
@@ -199,7 +242,6 @@ with tab_admin:
                 st.write("اختر الحاضرين:")
                 selected_students = []
                 for n in m_list["name"].tolist():
-                    # مفاتيح unique حتى ما تتخرب الـ checkboxes
                     if st.checkbox(n, key=f"att_{target_cat}_{attendance_day}_{n}"):
                         selected_students.append(n)
 
@@ -211,9 +253,7 @@ with tab_admin:
                         st.success("تم تسجيل الحضور بنجاح ✅")
                         clear_cache_and_rerun()
 
-        # -----------------------------
         # إدارة الطلاب
-        # -----------------------------
         with sub2:
             with st.form(key=f"add_student_{target_cat}", clear_on_submit=True):
                 name_in = st.text_input("الاسم الثلاثي")
@@ -234,7 +274,6 @@ with tab_admin:
             if m_list.empty:
                 st.info("لا يوجد طلاب لحذفهم.")
             else:
-                # حذف بالـ id (أضمن من الاسم)
                 options = [
                     (int(r["id"]), f'{r["name"]} - {r["mosque"]} - {r["grade"]}')
                     for _, r in m_list.iterrows()
@@ -245,9 +284,7 @@ with tab_admin:
                     st.success("تم حذف الطالب ✅")
                     clear_cache_and_rerun()
 
-        # -----------------------------
-        # التقارير التفصيلية (داخل بوابة المشرف مثل الأصل)
-        # -----------------------------
+        # التقارير التفصيلية
         with sub3:
             if m_list.empty:
                 st.info("لا يوجد طلاب في هذه الفئة.")
@@ -271,7 +308,6 @@ with tab_admin:
                         (all_logs["date"] <= pd.to_datetime(date_to))
                     )
                     filtered = all_logs[mask].copy()
-
                     days_in_period = filtered["date"].dt.date.nunique() if not filtered.empty else 0
 
                     rep = []
