@@ -16,7 +16,7 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # -----------------------------
-# RTL + تصميم (نهائي: موقع أبيض + حقول سوداء + دروب داون سوداء)
+# RTL + تصميم (نهائي)
 # -----------------------------
 st.markdown("""
 <style>
@@ -26,10 +26,16 @@ st.markdown("""
 /* خلفية وألوان عامة للموقع */
 .stApp { background-color: #0f172a; color: #f8fafc !important; }
 
-/* اجبار لون النص أبيض على كل عناصر الصفحة (ما عدا الحقول/القوائم) */
+/* اجبار لون النص أبيض على عناصر الصفحة (غير الحقول) */
 [data-testid="stMarkdownContainer"] * ,
 .stMarkdown, .stText, p, span, div, label, h1, h2, h3, h4, h5, h6 {
   color: #f8fafc !important;
+}
+
+/* ✅ عناوين الحقول (Labels) خليها دايمًا أبيض وواضح */
+[data-testid="stWidgetLabel"] * {
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
 }
 
 /* ===== الحقول والقوائم: خلفية بيضاء + نص أسود ===== */
@@ -72,9 +78,7 @@ div[role="listbox"] {
   background: #ffffff !important;
 }
 
-li[role="option"] {
-  background: #ffffff !important;
-}
+li[role="option"] { background: #ffffff !important; }
 
 li[role="option"]:hover,
 li[role="option"][aria-selected="true"] {
@@ -87,17 +91,17 @@ li[role="option"][aria-selected="true"] {
 table, th, td { color: #f8fafc !important; }
 
 /* ===== الهيدر ===== */
-.header-box { 
-  background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%); 
-  padding:2rem; border-radius:20px; border:1px solid #334155; 
-  margin-bottom:2rem; text-align:center !important; 
+.header-box {
+  background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
+  padding:2rem; border-radius:20px; border:1px solid #334155;
+  margin-bottom:2rem; text-align:center !important;
   box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);
 }
-.main-title { 
-  background: linear-gradient(90deg,#38bdf8,#818cf8); 
-  -webkit-background-clip:text; 
-  -webkit-text-fill-color:transparent; 
-  font-size:2.8rem; font-weight:900; margin:0; 
+.main-title {
+  background: linear-gradient(90deg,#38bdf8,#818cf8);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  font-size:2.8rem; font-weight:900; margin:0;
   text-align:center !important;
 }
 
@@ -222,6 +226,9 @@ l_list = df_logs[df_logs["category"] == norm_text(target_cat)].copy() if not df_
 
 tab_stats, tab_admin = st.tabs(["📊 كشف الالتزام","🔐 بوابة المشرف"])
 
+# =============================
+# ✅ كشف الالتزام (تم حذف عمود أيام الحضور من الجدول)
+# =============================
 with tab_stats:
     if m_list.empty:
         st.info("لا توجد طلاب في هذه الفئة.")
@@ -236,18 +243,26 @@ with tab_stats:
                 return 0
             return l_list[l_list["name"] == norm_text(student_name)]["date"].dt.date.nunique()
 
+        # نحسبها داخلياً فقط للنسبة
         m_list["أيام الحضور"] = m_list["name"].apply(days_present)
+
         m_list["النسبة المئوية"] = (
             (m_list["أيام الحضور"] / total_days * 100).round(1).astype(str) + "%"
             if total_days > 0 else "0%"
         )
 
-        st.table(m_list[["name","mosque","grade","أيام الحضور","النسبة المئوية"]].rename(columns={
-            "name":"الاسم",
-            "mosque":"المسجد",
-            "grade":"المرحلة الدراسية"
-        }))
+        # ✅ جدول العرض بدون "أيام الحضور"
+        st.table(
+            m_list[["name","mosque","grade","النسبة المئوية"]].rename(columns={
+                "name":"الاسم",
+                "mosque":"المسجد",
+                "grade":"المرحلة الدراسية"
+            })
+        )
 
+# =============================
+# بوابة المشرف
+# =============================
 with tab_admin:
     pwd = st.text_input("أدخل كلمة المرور:", type="password")
 
