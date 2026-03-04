@@ -96,18 +96,28 @@ with tab_admin:
         st.success("تم تسجيل الدخول ✅")
         sub1, sub2, sub3 = st.tabs(["📝 تسجيل الحضور","➕ إدارة الطلاب","📥 التقارير التفصيلية"])
 
-        # تسجيل الحضور (checkbox)
+        # تسجيل الحضور مع اختيار التاريخ وزر اعتماد
         with sub1:
             if not m_list.empty:
+                st.write("اختر تاريخ الحضور:")
+                attendance_date = st.date_input("تاريخ:", datetime.now())
+                
                 st.write("اختر الحاضرين:")
-                today = datetime.now().date()
+                selected_students = []
                 for n in sorted(m_list['الاسم'].unique()):
-                    checked = n in st.session_state['local_logs']['الاسم'].tolist() if not st.session_state['local_logs'].empty else False
-                    cb = st.checkbox(n,value=checked,key=f"att_{n}")
-                    if cb and not checked:
-                        # إضافة حضور جديد
-                        requests.post(API_URL,json={"action":"add_attendance","records":[{"name":n,"category":target_cat,"date":str(today)}]})
-                        st.session_state['local_logs'] = pd.concat([st.session_state['local_logs'], pd.DataFrame([{'الاسم':n,'الفئة':target_cat,'التاريخ':today}])],ignore_index=True)
+                    if st.checkbox(n, key=f"att_{n}"):
+                        selected_students.append(n)
+                
+                if st.button("✅ اعتماد كشف الحضور", use_container_width=True):
+                    if selected_students:
+                        recs = [{"name":n,"category":target_cat,"date":str(attendance_date)} for n in selected_students]
+                        requests.post(API_URL,json={"action":"add_attendance","records":recs})
+                        # إضافة مباشرة لذاكرة الجلسة
+                        new_logs = pd.DataFrame([{"الاسم":n,"الفئة":target_cat,"التاريخ":attendance_date} for n in selected_students])
+                        st.session_state['local_logs'] = pd.concat([st.session_state['local_logs'], new_logs], ignore_index=True)
+                        st.success("تم تسجيل الحضور بنجاح!")
+                    else:
+                        st.warning("الرجاء اختيار طالب واحد على الأقل.")
 
         # إدارة الطلاب
         with sub2:
@@ -121,6 +131,7 @@ with tab_admin:
                         new_student=pd.DataFrame([{"الاسم":name_in,"المسجد":msq_in,"المرحلة الدراسية":lvl_in,"الفئة":target_cat}])
                         st.session_state['local_students']=pd.concat([st.session_state['local_students'],new_student],ignore_index=True)
                         st.success(f"تمت إضافة {name_in} ✅")
+            
             del_n=st.selectbox("اختر الاسم لحذفه:",[""]+sorted(m_list['الاسم'].tolist()) if not m_list.empty else [""])
             if st.button("حذف الطالب",use_container_width=True):
                 if del_n:
