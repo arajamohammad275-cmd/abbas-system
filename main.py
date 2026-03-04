@@ -23,8 +23,8 @@ def run_query(query, params=None, fetch=False):
             return pd.DataFrame(result.fetchall(), columns=result.keys())
         conn.commit()
 
-# --- 2. التنسيق الجمالي (الأصلي) ---
-st.set_page_config(page_title="نظام حضور الأنشطة المتكامل", layout="wide")
+# --- 2. التنسيق الجمالي ---
+st.set_page_config(page_title="نظام حضور الأنشطة", layout="wide")
 
 st.markdown("""
 <style>
@@ -46,9 +46,9 @@ PASSWORDS = {
 }
 
 target_cat = st.sidebar.selectbox("📂 اختر الفئة:", list(PASSWORDS.keys()))
-tab_stats, tab_export, tab_admin = st.tabs(["📊 كشف الالتزام", "📥 استخراج التقارير (Excel)", "🔐 بوابة المشرف"])
+tab_stats, tab_admin = st.tabs(["📊 كشف الالتزام العام", "🔐 بوابة المشرف"])
 
-# --- 4. التبويب الأول: كشف الالتزام الحالي ---
+# --- 4. كشف الالتزام العام (للكل) ---
 with tab_stats:
     df_m = run_query("SELECT * FROM students WHERE category = :cat", {"cat": target_cat}, fetch=True)
     df_l = run_query("SELECT * FROM attendance WHERE category = :cat", {"cat": target_cat}, fetch=True)
@@ -65,68 +65,82 @@ with tab_stats:
             })
         st.table(pd.DataFrame(report))
     else:
-        st.info("لا يوجد طلاب مسجلين.")
+        st.info("لا يوجد طلاب مسجلين حالياً.")
 
-# --- 5. التبويب الثاني: استخراج التقارير (القسم الثالث الذي سألت عنه) ---
-with tab_export:
-    st.subheader("تحديد فترة التقرير")
-    col1, col2 = st.columns(2)
-    with col1:
-        start_date = st.date_input("من تاريخ:", datetime.now() - timedelta(days=30))
-    with col2:
-        end_date = st.date_input("إلى تاريخ:", datetime.now())
-
-    if st.button("توليد تقرير الفترة"):
-        # جلب الحضور في هذه الفترة فقط
-        df_period = run_query("""
-            SELECT student_name, date FROM attendance 
-            WHERE category = :cat AND date BETWEEN :s AND :e
-        """, {"cat": target_cat, "s": str(start_date), "e": str(end_date)}, fetch=True)
-        
-        if not df_period.empty:
-            # تحويل البيانات لشكل جدول Excel (Matrix)
-            report_xl = df_period.pivot_table(index='student_name', columns='date', aggfunc=lambda x: '✅', fill_value='❌')
-            
-            # تحويله لملف Excel في الذاكرة
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                report_xl.to_excel(writer, sheet_name='تقرير الحضور')
-            
-            st.success("✅ تم تجهيز التقرير بنجاح!")
-            st.download_button(
-                label="📥 تحميل التقرير بصيغة Excel",
-                data=output.getvalue(),
-                file_name=f"تقرير_حضور_{target_cat}_{start_date}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-            st.dataframe(report_xl)
-        else:
-            st.warning("لا توجد سجلات حضور في هذه الفترة.")
-
-# --- 6. التبويب الثالث: بوابة المشرف ---
+# --- 5. بوابة المشرف (محمية بكلمة مرور) ---
 with tab_admin:
-    pwd = st.text_input("كلمة المرور:", type="password")
+    pwd = st.text_input("أدخل كلمة مرور المشرف لرؤية الخيارات:", type="password")
     if pwd == PASSWORDS.get(target_cat):
-        s1, s2 = st.tabs(["📝 تسجيل حضور", "➕ إدارة الطلاب"])
+        st.success("✅ تم الدخول بنجاح. خيارات الإدارة متاحة الآن.")
+        
+        # التقسيم الثلاثي داخل بوابة المشرف
+        s1, s2, s3 = st.tabs(["📝 تسجيل حضور", "➕ إدارة الطلاب", "📥 استخراج تقارير Excel"])
+        
         with s1:
-            # كود تسجيل الحضور (كما كان عندك)
+            st.subheader("تسجيل حضور يوم جديد")
             att_date = st.date_input("التاريخ:", datetime.now())
             names = sorted(df_m['name'].tolist()) if not df_m.empty else []
             with st.form("att_f"):
                 selected = [n for n in names if st.checkbox(n)]
-                if st.form_submit_button("اعتماد"):
+                if st.form_submit_button("اعتماد الكشف"):
                     for n in selected:
                         run_query("INSERT INTO attendance (student_name, category, date) SELECT :n, :c, :d WHERE NOT EXISTS (SELECT 1 FROM attendance WHERE student_name=:n AND date=:d AND category=:c)", {"n": n, "c": target_cat, "d": str(att_date)})
-                    st.success("✨ تم الحفظ بنجاح!")
+                    st.success("✨ تم حفظ سجل الحضور بنجاح!")
                     st.rerun()
+
         with s2:
-            # كود إضافة الطلاب مع الرسالة الخضراء
+            st.subheader("إضافة طالب جديد")
             with st.form("add_f", clear_on_submit=True):
                 n_in = st.text_input("اسم الطالب:")
                 m_in = st.selectbox("المسجد:", ["شاهه العبيد","اليوسفين","العسعوسي","السهو","فاطمه الغلوم","الصقعبي","الرشيد","الرومي"])
                 g_in = st.selectbox("المرحلة:", ["الرابع","الخامس","السادس","السابع","الثامن","التاسع","العاشر","الحادي عشر","الثاني عشر","جامعي"])
-                if st.form_submit_button("إضافة الطالب"):
+                if st.form_submit_button("إضافة"):
                     if n_in:
                         run_query("INSERT INTO students (name, mosque, grade, category) VALUES (:n, :m, :g, :c)", {"n": n_in, "m": m_in, "g": g_in, "c": target_cat})
-                        st.success(f"✅ تم إضافة الطالب ({n_in}) بنجاح!")
+                        st.success(f"✅ تم إضافة ({n_in}) بنجاح!")
                         st.rerun()
+            
+            st.divider()
+            st.subheader("حذف طالب")
+            df_m_del = run_query("SELECT name FROM students WHERE category = :cat", {"cat": target_cat}, fetch=True)
+            del_n = st.selectbox("اختر الطالب للحذف:", [""] + (df_m_del['name'].tolist() if df_m_del is not None else []))
+            if st.button("تأكيد الحذف"):
+                if del_n:
+                    run_query("DELETE FROM students WHERE name = :n AND category = :c", {"n": del_n, "c": target_cat})
+                    st.warning(f"تم حذف سجلات {del_n}")
+                    st.rerun()
+
+        with s3:
+            st.subheader("استخراج تقرير Excel للمشرفين")
+            col1, col2 = st.columns(2)
+            with col1:
+                start_d = st.date_input("من تاريخ:", datetime.now() - timedelta(days=30))
+            with col2:
+                end_d = st.date_input("إلى تاريخ:", datetime.now())
+
+            if st.button("توليد ملف Excel"):
+                df_period = run_query("""
+                    SELECT student_name, date FROM attendance 
+                    WHERE category = :cat AND date BETWEEN :s AND :e
+                """, {"cat": target_cat, "s": str(start_d), "e": str(end_d)}, fetch=True)
+                
+                if not df_period.empty:
+                    # تحويل البيانات لجدول عرضي (Matrix)
+                    report_xl = df_period.pivot_table(index='student_name', columns='date', aggfunc=lambda x: '✅', fill_value='❌')
+                    
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                        report_xl.to_excel(writer, sheet_name='تقرير الحضور')
+                    
+                    st.success("✅ تم تجهيز الملف!")
+                    st.download_button(
+                        label="📥 تحميل تقرير Excel الآن",
+                        data=output.getvalue(),
+                        file_name=f"Admin_Report_{target_cat}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                    st.dataframe(report_xl)
+                else:
+                    st.warning("لا توجد سجلات في هذه الفترة.")
+    elif pwd != "":
+        st.error("❌ كلمة المرور غير صحيحة.")
