@@ -4,28 +4,28 @@ import requests
 from datetime import datetime
 import time
 
-# =============================
+# -----------------------------
 # إعدادات الصفحة
-# =============================
+# -----------------------------
 st.set_page_config(page_title="نظام حضور الأنشطة", layout="centered")
 
+# روابط جوجل شيت
 API_URL = "https://script.google.com/macros/s/AKfycbyK2LU11Y8PZAEJL3tvzj0XnJVVSnmjvptAXlRcxE4Z57zTLgfRJyi87uPG25Ap8-8DHA/exec"
 SHEET_ID = "19p75R69A5cvtwvRnyt1WIWjiqWAEX9GozAHjCzCNqww"
 
-READ_M = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Students"
-READ_L = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Logs"
+READ_M_BASE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Students"
+READ_L_BASE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Logs"
 
-# =============================
-# جلب البيانات (بدون cache)
-# =============================
+# -----------------------------
+# جلب البيانات
+# -----------------------------
+@st.cache_data(ttl=3)
 def fetch_data():
     try:
-        m = pd.read_csv(READ_M)
-        l = pd.read_csv(READ_L)
-
+        m = pd.read_csv(READ_M_BASE)
+        l = pd.read_csv(READ_L_BASE)
         m.columns = m.columns.str.strip()
         l.columns = l.columns.str.strip()
-
         return m, l
     except:
         return (
@@ -44,10 +44,8 @@ PASSWORDS = {
 }
 
 target_cat = st.selectbox("📂 اختر الفئة:", list(PASSWORDS.keys()))
+tab_stats, tab_admin = st.tabs(["📊 كشف الالتزام والنسب", "🔐 بوابة المشرف"])
 
-tab_stats, tab_admin = st.tabs(["📊 كشف الالتزام","🔐 بوابة المشرف"])
-
-# تصفية الفئة
 m_list = df_m[df_m["الفئة"]==target_cat].copy()
 l_list = df_l[df_l["الفئة"]==target_cat].copy()
 
@@ -68,7 +66,6 @@ with tab_stats:
     if m_list.empty:
         st.info("لا يوجد طلاب في هذه الفئة.")
     else:
-
         total_days = l_list["التاريخ"].dt.date.nunique() if not l_list.empty else 0
 
         def count_attendance(name):
@@ -78,9 +75,9 @@ with tab_stats:
 
         if total_days > 0:
             m_list["النسبة المئوية"] = (
-                (m_list["أيام الحضور"] / total_days * 100)
+                (m_list["أيام الحضور"]/total_days*100)
                 .round(1)
-                .astype(str) + "%"
+                .astype(str)+"%"
             )
         else:
             m_list["النسبة المئوية"] = "0%"
@@ -107,7 +104,7 @@ with tab_admin:
         st.success("تم تسجيل الدخول بنجاح ✅")
 
         sub1, sub2, sub3 = st.tabs(
-            ["📝 تسجيل الحضور","➕ إدارة الطلاب","📥 التقارير"]
+            ["📝 تسجيل الحضور", "➕ إدارة الطلاب", "📥 التقارير التفصيلية"]
         )
 
         # -------------------------
@@ -117,27 +114,21 @@ with tab_admin:
 
             if not m_list.empty:
 
-                attendance_date = st.date_input(
-                    "اختر تاريخ الحضور:",
-                    datetime.now()
-                )
+                with st.form("attendance_form", clear_on_submit=True):
 
-                selected = []
+                    today = st.date_input("تاريخ اليوم:", datetime.now())
 
-                for n in m_list["الاسم"]:
-                    if st.checkbox(n, key=f"att_{n}"):
-                        selected.append(n)
+                    selected = []
+                    for n in m_list["الاسم"]:
+                        if st.checkbox(n, key=f"att_{n}"):
+                            selected.append(n)
 
-                if st.button("✅ اعتماد كشف الحضور", use_container_width=True):
+                    submitted = st.form_submit_button("✅ اعتماد كشف الحضور")
 
-                    if selected:
+                    if submitted and selected:
 
                         recs = [
-                            {
-                                "name": n,
-                                "category": target_cat,
-                                "date": str(attendance_date)
-                            }
+                            {"name":n,"category":target_cat,"date":str(today)}
                             for n in selected
                         ]
 
@@ -146,17 +137,18 @@ with tab_admin:
                             json={"action":"add_attendance","records":recs}
                         )
 
-                        time.sleep(0.3)
+                        st.cache_data.clear()
+                        time.sleep(0.2)
                         st.rerun()
 
-                    else:
+                    elif submitted:
                         st.warning("اختر طالب واحد على الأقل.")
 
             else:
                 st.info("لا يوجد طلاب لتسجيل حضورهم.")
 
         # -------------------------
-        # إدارة الطلاب
+        # إضافة طالب
         # -------------------------
         with sub2:
 
@@ -178,7 +170,7 @@ with tab_admin:
                      "الحادي عشر","الثاني عشر","جامعي"]
                 )
 
-                submitted = st.form_submit_button("إضافة الطالب")
+                submitted = st.form_submit_button("إضافة الطالب الآن")
 
                 if submitted and name_in:
 
@@ -193,7 +185,8 @@ with tab_admin:
                         }
                     )
 
-                    time.sleep(0.3)
+                    st.cache_data.clear()
+                    time.sleep(0.2)
                     st.rerun()
 
             st.divider()
@@ -201,11 +194,11 @@ with tab_admin:
             if not m_list.empty:
 
                 del_name = st.selectbox(
-                    "اختر الطالب للحذف:",
-                    [""] + m_list["الاسم"].tolist()
+                    "اختر الاسم المراد حذفه:",
+                    [""]+m_list["الاسم"].tolist()
                 )
 
-                if st.button("حذف الطالب") and del_name:
+                if st.button("تأكيد الحذف النهائي") and del_name:
 
                     requests.post(
                         API_URL,
@@ -216,11 +209,12 @@ with tab_admin:
                         }
                     )
 
-                    time.sleep(0.3)
+                    st.cache_data.clear()
+                    time.sleep(0.2)
                     st.rerun()
 
         # -------------------------
-        # التقارير
+        # التقارير التفصيلية
         # -------------------------
         with sub3:
 
@@ -229,7 +223,7 @@ with tab_admin:
             date_from = d1.date_input("من تاريخ", datetime.now())
             date_to = d2.date_input("إلى تاريخ", datetime.now())
 
-            if st.button("📊 تجهيز التقرير"):
+            if st.button("📊 تجهيز التقرير التفصيلي"):
 
                 mask = (
                     (l_list["التاريخ"] >= pd.to_datetime(date_from)) &
@@ -268,7 +262,7 @@ with tab_admin:
                 csv = res_df.to_csv(index=False).encode("utf-8-sig")
 
                 st.download_button(
-                    "تحميل CSV",
+                    "📥 تحميل التقرير الشامل",
                     csv,
                     f"تقرير_{datetime.now().strftime('%Y-%m-%d')}.csv",
                     "text/csv"
