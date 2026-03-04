@@ -233,16 +233,16 @@ def add_attendance_bulk(names: list[str], category: str, attendance_day: date):
 # كلمات المرور
 # -----------------------------
 PASSWORDS = {
-    "فئة أشبال السالمية":"Salmiya2026",
-    "فئة أشبال حولي":"Hawally2026",
-    "فئة الفتية":"Fetya2026",
-    "فئة الشباب":"Shabab2026",
-    "فئة الجامعيين":"Uni2026"
+    "فئة أشبال السالمية": "Salmiya2026",
+    "فئة أشبال حولي": "Hawally2026",
+    "فئة الفتية": "Fetya2026",
+    "فئة الشباب": "Shabab2026",
+    "فئة الجامعيين": "Uni2026"
 }
 
 target_cat = st.selectbox("📂 اختر الفئة:", list(PASSWORDS.keys()))
 
-# ✅ عرض رسالة نجاح تسجيل الحضور حتى بعد rerun
+# ✅ رسائل نجاح بعد rerun
 if st.session_state.get("ATT_OK_MSG"):
     st.success(st.session_state["ATT_OK_MSG"])
     st.session_state["ATT_OK_MSG"] = ""
@@ -256,7 +256,7 @@ df_logs["category"] = df_logs["category"].apply(norm_text) if "category" in df_l
 m_list = df_students[df_students["category"] == norm_text(target_cat)].sort_values(by="name", ignore_index=True) if not df_students.empty else pd.DataFrame()
 l_list = df_logs[df_logs["category"] == norm_text(target_cat)].copy() if not df_logs.empty else pd.DataFrame()
 
-tab_stats, tab_admin = st.tabs(["📊 كشف الالتزام","🔐 بوابة المشرف"])
+tab_stats, tab_admin = st.tabs(["📊 كشف الالتزام", "🔐 بوابة المشرف"])
 
 # =============================
 # كشف الالتزام (بدون أيام الحضور في الجدول)
@@ -282,10 +282,10 @@ with tab_stats:
         )
 
         st.table(
-            m_list[["name","mosque","grade","النسبة المئوية"]].rename(columns={
-                "name":"الاسم",
-                "mosque":"المسجد",
-                "grade":"المرحلة الدراسية"
+            m_list[["name", "mosque", "grade", "النسبة المئوية"]].rename(columns={
+                "name": "الاسم",
+                "mosque": "المسجد",
+                "grade": "المرحلة الدراسية"
             })
         )
 
@@ -298,10 +298,10 @@ with tab_admin:
     if pwd == PASSWORDS.get(target_cat):
         st.success("تم تسجيل الدخول ✅")
 
-        sub1, sub2, sub3 = st.tabs(["📝 تسجيل الحضور","➕ إدارة الطلاب","📥 التقارير التفصيلية"])
+        sub1, sub2, sub3 = st.tabs(["📝 تسجيل الحضور", "➕ إدارة الطلاب", "📥 التقارير التفصيلية"])
 
         # -----------------------------
-        # تسجيل الحضور (يمسح الصحّات بعد الاعتماد)
+        # تسجيل الحضور (يمسح الصحّات بعد الاعتماد) - FIX بدون Error
         # -----------------------------
         with sub1:
             if m_list.empty:
@@ -312,6 +312,13 @@ with tab_admin:
                     datetime.now().date(),
                     key=f"att_date_{target_cat}"
                 )
+
+                # ✅ RESET للـ checkboxes قبل رسمها (حتى ما يصير StreamlitAPIException)
+                if st.session_state.get("RESET_ATT") and st.session_state.get("RESET_KEYS"):
+                    for k in st.session_state["RESET_KEYS"]:
+                        st.session_state[k] = False
+                    st.session_state["RESET_ATT"] = False
+                    st.session_state["RESET_KEYS"] = []
 
                 st.write("اختر الحاضرين:")
                 selected_students = []
@@ -329,9 +336,9 @@ with tab_admin:
                     else:
                         add_attendance_bulk(selected_students, target_cat, attendance_day)
 
-                        for k in checkbox_keys:
-                            if k in st.session_state:
-                                st.session_state[k] = False
+                        # ✅ بدل ما نعدل القيم الآن (يسبب Error)، نخليها تتصفّر بالرّن القادم
+                        st.session_state["RESET_ATT"] = True
+                        st.session_state["RESET_KEYS"] = checkbox_keys
 
                         st.session_state["ATT_OK_MSG"] = "تم اعتماد كشف الحضور ✅"
                         clear_cache_and_rerun()
@@ -342,8 +349,8 @@ with tab_admin:
         with sub2:
             with st.form(key=f"add_student_{target_cat}", clear_on_submit=True):
                 name_in = st.text_input("الاسم الثلاثي")
-                msq_in = st.selectbox("المسجد",["شاهه العبيد","اليوسفين","العسعوسي","السهو","فاطمه الغلوم","الصقعبي","الرشيد","الرومي"])
-                lvl_in = st.selectbox("المرحلة الدراسية",["الرابع","الخامس","السادس","السابع","الثامن","التاسع","العاشر","الحادي عشر","الثاني عشر","جامعي"])
+                msq_in = st.selectbox("المسجد", ["شاهه العبيد", "اليوسفين", "العسعوسي", "السهو", "فاطمه الغلوم", "الصقعبي", "الرشيد", "الرومي"])
+                lvl_in = st.selectbox("المرحلة الدراسية", ["الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر", "الحادي عشر", "الثاني عشر", "جامعي"])
                 submit_add = st.form_submit_button("إضافة الطالب", use_container_width=True)
 
             if submit_add:
