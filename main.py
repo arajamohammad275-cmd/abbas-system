@@ -155,12 +155,11 @@ def norm_text(x) -> str:
         return ""
     return str(x).strip()
 
-def clear_cache_and_rerun():
+def refresh_data_cache():
     try:
         st.cache_data.clear()
     except Exception:
         pass
-    st.rerun()
 
 # -----------------------------
 # جلب البيانات
@@ -242,11 +241,12 @@ PASSWORDS = {
 
 target_cat = st.selectbox("📂 اختر الفئة:", list(PASSWORDS.keys()))
 
-# ✅ رسائل نجاح بعد rerun
+# ✅ رسائل نجاح بعد rerun الطبيعي من Streamlit (بدون st.rerun)
 if st.session_state.get("ATT_OK_MSG"):
     st.success(st.session_state["ATT_OK_MSG"])
     st.session_state["ATT_OK_MSG"] = ""
 
+# جلب البيانات
 df_students = fetch_students_df()
 df_logs = fetch_attendance_df()
 
@@ -301,7 +301,7 @@ with tab_admin:
         sub1, sub2, sub3 = st.tabs(["📝 تسجيل الحضور", "➕ إدارة الطلاب", "📥 التقارير التفصيلية"])
 
         # -----------------------------
-        # تسجيل الحضور (يمسح الصحّات بعد الاعتماد) - FIX بدون Error
+        # تسجيل الحضور (FIX: keys فريدة باستخدام id + بدون st.rerun)
         # -----------------------------
         with sub1:
             if m_list.empty:
@@ -313,7 +313,7 @@ with tab_admin:
                     key=f"att_date_{target_cat}"
                 )
 
-                # ✅ RESET للـ checkboxes قبل رسمها (حتى ما يصير StreamlitAPIException)
+                # ✅ تصفير الصحّات قبل رسمها (حتى ما يصير StreamlitAPIException)
                 if st.session_state.get("RESET_ATT") and st.session_state.get("RESET_KEYS"):
                     for k in st.session_state["RESET_KEYS"]:
                         st.session_state[k] = False
@@ -324,9 +324,14 @@ with tab_admin:
                 selected_students = []
                 checkbox_keys = []
 
-                for n in m_list["name"].tolist():
-                    k = f"att_{target_cat}_{attendance_day}_{n}"
+                # ✅ KEY = يعتمد على id (فريد) بدل الاسم (قد يتكرر)
+                for _, row in m_list.iterrows():
+                    sid = int(row["id"])
+                    n = row["name"]
+
+                    k = f"att_{target_cat}_{attendance_day}_{sid}"
                     checkbox_keys.append(k)
+
                     if st.checkbox(n, key=k):
                         selected_students.append(n)
 
@@ -336,12 +341,14 @@ with tab_admin:
                     else:
                         add_attendance_bulk(selected_students, target_cat, attendance_day)
 
-                        # ✅ بدل ما نعدل القيم الآن (يسبب Error)، نخليها تتصفّر بالرّن القادم
+                        # ✅ لا نلمس قيم الـ checkbox الآن (بعد ما انرسمت)، نخليها تتصفّر بالرّن القادم
                         st.session_state["RESET_ATT"] = True
                         st.session_state["RESET_KEYS"] = checkbox_keys
 
                         st.session_state["ATT_OK_MSG"] = "تم اعتماد كشف الحضور ✅"
-                        clear_cache_and_rerun()
+
+                        # ✅ تحديث الداتا بدون st.rerun (الضغط على الزر أصلاً يعمل rerun طبيعي)
+                        refresh_data_cache()
 
         # -----------------------------
         # إدارة الطلاب
@@ -359,7 +366,7 @@ with tab_admin:
                 else:
                     add_student_to_db(name_in, msq_in, lvl_in, target_cat)
                     st.success(f"تمت إضافة {norm_text(name_in)} ✅")
-                    clear_cache_and_rerun()
+                    refresh_data_cache()
 
             st.divider()
 
@@ -374,7 +381,7 @@ with tab_admin:
                 if st.button("🗑️ حذف الطالب", use_container_width=True):
                     delete_student_from_db(chosen[0])
                     st.success("تم حذف الطالب ✅")
-                    clear_cache_and_rerun()
+                    refresh_data_cache()
 
         # -----------------------------
         # التقارير التفصيلية
