@@ -22,26 +22,17 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
 * { font-family: 'Cairo', sans-serif !important; direction: rtl !important; text-align: right !important; }
-
-/* خلفية وألوان عامة للموقع */
 .stApp { background-color: #0f172a; color: #f8fafc !important; }
 
-/* اجبار لون النص أبيض على عناصر الصفحة (غير الحقول) */
 [data-testid="stMarkdownContainer"] * ,
 .stMarkdown, .stText, p, span, div, label, h1, h2, h3, h4, h5, h6 {
   color: #f8fafc !important;
 }
-
-/* ✅ عناوين الحقول (Labels) خليها دايمًا أبيض وواضح */
 [data-testid="stWidgetLabel"] * {
   color: #f8fafc !important;
   -webkit-text-fill-color: #f8fafc !important;
 }
 
-/* =========================
-   FIX شامل لكل الحقول (BaseWeb + Streamlit)
-   الهدف: الخانة أبيض + النص أسود + placeholder رمادي
-   ========================= */
 input, textarea {
   color: #0b1220 !important;
   -webkit-text-fill-color: #0b1220 !important;
@@ -77,7 +68,6 @@ div[data-baseweb="textarea"] textarea::placeholder {
   -webkit-text-fill-color: #0b1220 !important;
 }
 
-/* ===== Fix dropdown menu items (white bg + black text) ===== */
 div[data-baseweb="popover"] *,
 ul[role="listbox"] *,
 div[role="listbox"] * {
@@ -86,9 +76,8 @@ div[role="listbox"] * {
 }
 div[data-baseweb="popover"],
 ul[role="listbox"],
-div[role="listbox"] {
-  background: #ffffff !important;
-}
+div[role="listbox"] { background: #ffffff !important; }
+
 li[role="option"] { background: #ffffff !important; }
 li[role="option"]:hover,
 li[role="option"][aria-selected="true"] {
@@ -97,10 +86,8 @@ li[role="option"][aria-selected="true"] {
   -webkit-text-fill-color: #0b1220 !important;
 }
 
-/* ===== جداول Streamlit ===== */
 table, th, td { color: #f8fafc !important; }
 
-/* ===== الهيدر ===== */
 .header-box {
   background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
   padding:2rem; border-radius:20px; border:1px solid #334155;
@@ -114,8 +101,6 @@ table, th, td { color: #f8fafc !important; }
   font-size:2.8rem; font-weight:900; margin:0;
   text-align:center !important;
 }
-
-/* ===== الأزرار ===== */
 .stButton>button{
   border-radius:12px;
   background:linear-gradient(90deg,#3b82f6,#2563eb);
@@ -125,8 +110,6 @@ table, th, td { color: #f8fafc !important; }
   height:3.5rem;
   border:none;
 }
-
-/* ===== شكل شبيه Tabs للـ radio ===== */
 div[role="radiogroup"]{gap:10px;}
 div[role="radiogroup"] label{
   background:#1e293b;
@@ -155,7 +138,7 @@ def refresh_data_cache():
         pass
 
 # -----------------------------
-# ✅ Callbacks لتثبيت التبويبات بدون StreamlitAPIException
+# Callbacks (لازم كل تغيير للـ radio keys يكون هنا)
 # -----------------------------
 def go_admin_attendance():
     st.session_state["main_view"] = "🔐 بوابة المشرف"
@@ -249,10 +232,38 @@ PASSWORDS = {
 
 target_cat = st.selectbox("📂 اختر الفئة:", list(PASSWORDS.keys()))
 
-# ✅ رسائل نجاح بعد الاعتماد
+# -----------------------------
+# ✅ Callback إضافة طالب (لأنها كانت سبب الخطأ)
+# -----------------------------
+def add_student_cb():
+    name_in = norm_text(st.session_state.get("name_in", ""))
+    msq_in = norm_text(st.session_state.get("msq_in", ""))
+    lvl_in = norm_text(st.session_state.get("lvl_in", ""))
+
+    if not name_in:
+        st.session_state["GEN_MSG"] = ("warning", "الرجاء إدخال الاسم.")
+        go_admin_students()
+        return
+
+    add_student_to_db(name_in, msq_in, lvl_in, target_cat)
+    st.session_state["GEN_MSG"] = ("success", f"تمت إضافة {name_in} ✅")
+    go_admin_students()
+    refresh_data_cache()
+
+# ✅ رسائل عامة
 if st.session_state.get("ATT_OK_MSG"):
     st.success(st.session_state["ATT_OK_MSG"])
     st.session_state["ATT_OK_MSG"] = ""
+
+if st.session_state.get("GEN_MSG"):
+    t, m = st.session_state["GEN_MSG"]
+    if t == "success":
+        st.success(m)
+    elif t == "warning":
+        st.warning(m)
+    else:
+        st.info(m)
+    st.session_state["GEN_MSG"] = None
 
 # جلب البيانات
 df_students = fetch_students_df()
@@ -264,9 +275,9 @@ df_logs["category"] = df_logs["category"].apply(norm_text) if "category" in df_l
 m_list = df_students[df_students["category"] == norm_text(target_cat)].sort_values(by="name", ignore_index=True) if not df_students.empty else pd.DataFrame()
 l_list = df_logs[df_logs["category"] == norm_text(target_cat)].copy() if not df_logs.empty else pd.DataFrame()
 
-# =============================
-# ✅ بديل st.tabs: راديو أفقي يثبت
-# =============================
+# -----------------------------
+# ✅ Navigation ثابت
+# -----------------------------
 if "main_view" not in st.session_state:
     st.session_state["main_view"] = "🔐 بوابة المشرف"
 
@@ -343,7 +354,6 @@ else:
                     key=f"att_date_{target_cat}"
                 )
 
-                # ✅ Reset للـ checkboxes قبل رسمها
                 if st.session_state.get("RESET_ATT") and st.session_state.get("RESET_KEYS"):
                     for k in st.session_state["RESET_KEYS"]:
                         st.session_state[k] = False
@@ -354,7 +364,6 @@ else:
                 selected_students = []
                 checkbox_keys = []
 
-                # ✅ KEY فريد باستخدام id
                 for _, row in m_list.iterrows():
                     sid = int(row["id"])
                     n = row["name"]
@@ -368,10 +377,8 @@ else:
                         st.warning("الرجاء اختيار طالب واحد على الأقل.")
                     else:
                         add_attendance_bulk(selected_students, target_cat, attendance_day)
-
                         st.session_state["RESET_ATT"] = True
                         st.session_state["RESET_KEYS"] = checkbox_keys
-
                         st.session_state["ATT_OK_MSG"] = "تم اعتماد كشف الحضور ✅"
                         refresh_data_cache()
 
@@ -380,19 +387,12 @@ else:
         # -----------------------------
         elif admin_view == "➕ إدارة الطلاب":
             with st.form(key=f"add_student_{target_cat}", clear_on_submit=True):
-                name_in = st.text_input("الاسم الثلاثي")
-                msq_in = st.selectbox("المسجد", ["شاهه العبيد", "اليوسفين", "العسعوسي", "السهو", "فاطمه الغلوم", "الصقعبي", "الرشيد", "الرومي"])
-                lvl_in = st.selectbox("المرحلة الدراسية", ["الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر", "الحادي عشر", "الثاني عشر", "جامعي"])
-                submit_add = st.form_submit_button("إضافة الطالب", use_container_width=True)
+                st.text_input("الاسم الثلاثي", key="name_in")
+                st.selectbox("المسجد", ["شاهه العبيد", "اليوسفين", "العسعوسي", "السهو", "فاطمه الغلوم", "الصقعبي", "الرشيد", "الرومي"], key="msq_in")
+                st.selectbox("المرحلة الدراسية", ["الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر", "الحادي عشر", "الثاني عشر", "جامعي"], key="lvl_in")
 
-            if submit_add:
-                if not norm_text(name_in):
-                    st.warning("الرجاء إدخال الاسم.")
-                else:
-                    add_student_to_db(name_in, msq_in, lvl_in, target_cat)
-                    st.success(f"تمت إضافة {norm_text(name_in)} ✅")
-                    go_admin_students()
-                    refresh_data_cache()
+                # ✅ on_click هنا هو الحل النهائي (بدون أي تعديل session_state بعد الراديو)
+                st.form_submit_button("إضافة الطالب", use_container_width=True, on_click=add_student_cb)
 
             st.divider()
 
