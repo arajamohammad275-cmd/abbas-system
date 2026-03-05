@@ -155,6 +155,21 @@ def refresh_data_cache():
         pass
 
 # -----------------------------
+# ✅ Callbacks لتثبيت التبويبات بدون StreamlitAPIException
+# -----------------------------
+def go_admin_attendance():
+    st.session_state["main_view"] = "🔐 بوابة المشرف"
+    st.session_state["admin_view"] = "📝 تسجيل الحضور"
+
+def go_admin_students():
+    st.session_state["main_view"] = "🔐 بوابة المشرف"
+    st.session_state["admin_view"] = "➕ إدارة الطلاب"
+
+def go_admin_reports():
+    st.session_state["main_view"] = "🔐 بوابة المشرف"
+    st.session_state["admin_view"] = "📥 التقارير التفصيلية"
+
+# -----------------------------
 # جلب البيانات
 # -----------------------------
 @st.cache_data(ttl=5)
@@ -250,10 +265,10 @@ m_list = df_students[df_students["category"] == norm_text(target_cat)].sort_valu
 l_list = df_logs[df_logs["category"] == norm_text(target_cat)].copy() if not df_logs.empty else pd.DataFrame()
 
 # =============================
-# ✅ بديل st.tabs: راديو أفقي يثبت ولا يرجّعك للأول
+# ✅ بديل st.tabs: راديو أفقي يثبت
 # =============================
 if "main_view" not in st.session_state:
-    st.session_state["main_view"] = "🔐 بوابة المشرف"  # خليه الافتراضي مشرف
+    st.session_state["main_view"] = "🔐 بوابة المشرف"
 
 main_view = st.radio(
     "التنقل:",
@@ -348,19 +363,14 @@ else:
                     if st.checkbox(n, key=k):
                         selected_students.append(n)
 
-                if st.button("✅ اعتماد كشف الحضور", use_container_width=True):
+                if st.button("✅ اعتماد كشف الحضور", use_container_width=True, on_click=go_admin_attendance):
                     if not selected_students:
                         st.warning("الرجاء اختيار طالب واحد على الأقل.")
                     else:
                         add_attendance_bulk(selected_students, target_cat, attendance_day)
 
-                        # ✅ نخلي التصـفير بالرّن القادم
                         st.session_state["RESET_ATT"] = True
                         st.session_state["RESET_KEYS"] = checkbox_keys
-
-                        # ✅ تثبيت المكان بعد الرن: مشرف + تسجيل الحضور
-                        st.session_state["main_view"] = "🔐 بوابة المشرف"
-                        st.session_state["admin_view"] = "📝 تسجيل الحضور"
 
                         st.session_state["ATT_OK_MSG"] = "تم اعتماد كشف الحضور ✅"
                         refresh_data_cache()
@@ -381,8 +391,7 @@ else:
                 else:
                     add_student_to_db(name_in, msq_in, lvl_in, target_cat)
                     st.success(f"تمت إضافة {norm_text(name_in)} ✅")
-                    st.session_state["main_view"] = "🔐 بوابة المشرف"
-                    st.session_state["admin_view"] = "➕ إدارة الطلاب"
+                    go_admin_students()
                     refresh_data_cache()
 
             st.divider()
@@ -395,11 +404,10 @@ else:
                     for _, r in m_list.iterrows()
                 ]
                 chosen = st.selectbox("اختر الطالب لحذفه:", options=options, format_func=lambda x: x[1], key=f"del_{target_cat}")
-                if st.button("🗑️ حذف الطالب", use_container_width=True):
+
+                if st.button("🗑️ حذف الطالب", use_container_width=True, on_click=go_admin_students):
                     delete_student_from_db(chosen[0])
                     st.success("تم حذف الطالب ✅")
-                    st.session_state["main_view"] = "🔐 بوابة المشرف"
-                    st.session_state["admin_view"] = "➕ إدارة الطلاب"
                     refresh_data_cache()
 
         # -----------------------------
@@ -413,7 +421,7 @@ else:
                 date_from = d1.date_input("من تاريخ", datetime.now().date(), key=f"rep_from_{target_cat}")
                 date_to = d2.date_input("إلى تاريخ", datetime.now().date(), key=f"rep_to_{target_cat}")
 
-                if st.button("📊 تجهيز التقرير", use_container_width=True):
+                if st.button("📊 تجهيز التقرير", use_container_width=True, on_click=go_admin_reports):
                     all_logs = fetch_attendance_df().copy()
                     if all_logs.empty:
                         st.info("لا يوجد سجلات حضور بعد.")
