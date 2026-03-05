@@ -24,15 +24,18 @@ st.markdown("""
 * { font-family: 'Cairo', sans-serif !important; direction: rtl !important; text-align: right !important; }
 .stApp { background-color: #0f172a; color: #f8fafc !important; }
 
+/* اجبار لون النص أبيض على عناصر الصفحة (غير الحقول) */
 [data-testid="stMarkdownContainer"] * ,
 .stMarkdown, .stText, p, span, div, label, h1, h2, h3, h4, h5, h6 {
   color: #f8fafc !important;
 }
+/* Labels */
 [data-testid="stWidgetLabel"] * {
   color: #f8fafc !important;
   -webkit-text-fill-color: #f8fafc !important;
 }
 
+/* الحقول */
 input, textarea {
   color: #0b1220 !important;
   -webkit-text-fill-color: #0b1220 !important;
@@ -68,6 +71,7 @@ div[data-baseweb="textarea"] textarea::placeholder {
   -webkit-text-fill-color: #0b1220 !important;
 }
 
+/* dropdown */
 div[data-baseweb="popover"] *,
 ul[role="listbox"] *,
 div[role="listbox"] * {
@@ -77,7 +81,6 @@ div[role="listbox"] * {
 div[data-baseweb="popover"],
 ul[role="listbox"],
 div[role="listbox"] { background: #ffffff !important; }
-
 li[role="option"] { background: #ffffff !important; }
 li[role="option"]:hover,
 li[role="option"][aria-selected="true"] {
@@ -86,8 +89,10 @@ li[role="option"][aria-selected="true"] {
   -webkit-text-fill-color: #0b1220 !important;
 }
 
+/* جدول */
 table, th, td { color: #f8fafc !important; }
 
+/* header */
 .header-box {
   background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
   padding:2rem; border-radius:20px; border:1px solid #334155;
@@ -101,6 +106,8 @@ table, th, td { color: #f8fafc !important; }
   font-size:2.8rem; font-weight:900; margin:0;
   text-align:center !important;
 }
+
+/* buttons */
 .stButton>button{
   border-radius:12px;
   background:linear-gradient(90deg,#3b82f6,#2563eb);
@@ -110,6 +117,8 @@ table, th, td { color: #f8fafc !important; }
   height:3.5rem;
   border:none;
 }
+
+/* شكل شبيه Tabs للـ radio */
 div[role="radiogroup"]{gap:10px;}
 div[role="radiogroup"] label{
   background:#1e293b;
@@ -138,7 +147,7 @@ def refresh_data_cache():
         pass
 
 # -----------------------------
-# Callbacks (لازم كل تغيير للـ radio keys يكون هنا)
+# Callbacks (أي تغيير ل radio keys لازم يكون هنا)
 # -----------------------------
 def go_admin_attendance():
     st.session_state["main_view"] = "🔐 بوابة المشرف"
@@ -233,7 +242,7 @@ PASSWORDS = {
 target_cat = st.selectbox("📂 اختر الفئة:", list(PASSWORDS.keys()))
 
 # -----------------------------
-# ✅ Callback إضافة طالب (لأنها كانت سبب الخطأ)
+# ✅ Callback إضافة طالب (لازم on_submit)
 # -----------------------------
 def add_student_cb():
     name_in = norm_text(st.session_state.get("name_in", ""))
@@ -250,7 +259,9 @@ def add_student_cb():
     go_admin_students()
     refresh_data_cache()
 
-# ✅ رسائل عامة
+# -----------------------------
+# رسائل
+# -----------------------------
 if st.session_state.get("ATT_OK_MSG"):
     st.success(st.session_state["ATT_OK_MSG"])
     st.session_state["ATT_OK_MSG"] = ""
@@ -265,7 +276,9 @@ if st.session_state.get("GEN_MSG"):
         st.info(m)
     st.session_state["GEN_MSG"] = None
 
+# -----------------------------
 # جلب البيانات
+# -----------------------------
 df_students = fetch_students_df()
 df_logs = fetch_attendance_df()
 
@@ -354,6 +367,7 @@ else:
                     key=f"att_date_{target_cat}"
                 )
 
+                # ✅ تصفير الصحّات قبل رسمها (إذا كان فيه reset pending)
                 if st.session_state.get("RESET_ATT") and st.session_state.get("RESET_KEYS"):
                     for k in st.session_state["RESET_KEYS"]:
                         st.session_state[k] = False
@@ -364,6 +378,7 @@ else:
                 selected_students = []
                 checkbox_keys = []
 
+                # ✅ KEY فريد باستخدام id
                 for _, row in m_list.iterrows():
                     sid = int(row["id"])
                     n = row["name"]
@@ -372,15 +387,27 @@ else:
                     if st.checkbox(n, key=k):
                         selected_students.append(n)
 
+                # ✅ اعتماد كشف الحضور: رسالة + مسح الصحّات فوراً + يبقى بنفس المكان
                 if st.button("✅ اعتماد كشف الحضور", use_container_width=True, on_click=go_admin_attendance):
                     if not selected_students:
                         st.warning("الرجاء اختيار طالب واحد على الأقل.")
                     else:
                         add_attendance_bulk(selected_students, target_cat, attendance_day)
+
+                        # نخلي التصـفير بالرّن القادم
                         st.session_state["RESET_ATT"] = True
                         st.session_state["RESET_KEYS"] = checkbox_keys
+
+                        # رسالة نجاح
                         st.session_state["ATT_OK_MSG"] = "تم اعتماد كشف الحضور ✅"
+
+                        # تحديث الكاش
                         refresh_data_cache()
+
+                        # ✅ rerun فوري عشان:
+                        # - تظهر الرسالة مباشرة
+                        # - تنمسح الصحّات مباشرة
+                        st.rerun()
 
         # -----------------------------
         # ➕ إدارة الطلاب
@@ -390,8 +417,6 @@ else:
                 st.text_input("الاسم الثلاثي", key="name_in")
                 st.selectbox("المسجد", ["شاهه العبيد", "اليوسفين", "العسعوسي", "السهو", "فاطمه الغلوم", "الصقعبي", "الرشيد", "الرومي"], key="msq_in")
                 st.selectbox("المرحلة الدراسية", ["الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر", "الحادي عشر", "الثاني عشر", "جامعي"], key="lvl_in")
-
-                # ✅ on_click هنا هو الحل النهائي (بدون أي تعديل session_state بعد الراديو)
                 st.form_submit_button("إضافة الطالب", use_container_width=True, on_click=add_student_cb)
 
             st.divider()
@@ -407,8 +432,9 @@ else:
 
                 if st.button("🗑️ حذف الطالب", use_container_width=True, on_click=go_admin_students):
                     delete_student_from_db(chosen[0])
-                    st.success("تم حذف الطالب ✅")
+                    st.session_state["GEN_MSG"] = ("success", "تم حذف الطالب ✅")
                     refresh_data_cache()
+                    st.rerun()
 
         # -----------------------------
         # 📥 التقارير التفصيلية
