@@ -42,38 +42,28 @@ st.markdown("""
    FIX شامل لكل الحقول (BaseWeb + Streamlit)
    الهدف: الخانة أبيض + النص أسود + placeholder رمادي
    ========================= */
-
-/* كل input/textarea بشكل عام */
 input, textarea {
   color: #0b1220 !important;
   -webkit-text-fill-color: #0b1220 !important;
   caret-color: #0b1220 !important;
   background: #ffffff !important;
 }
-
-/* BaseWeb inputs (اللي داخل الفورم غالباً) */
 div[data-baseweb="input"] input,
 div[data-baseweb="textarea"] textarea {
   background: #ffffff !important;
   color: #0b1220 !important;
   -webkit-text-fill-color: #0b1220 !important;
 }
-
-/* Containers الخاصة بالـ select/multi/date */
 div[data-baseweb="select"] > div,
 div[data-testid="stDateInput"] div[data-baseweb="input"] > div,
 div[data-testid="stTextInput"] div[data-baseweb="input"] > div,
 div[data-testid="stTextArea"] div[data-baseweb="textarea"] > div {
   background: #ffffff !important;
 }
-
-/* قيمة المختار داخل select/multi تكون سوداء */
 div[data-baseweb="select"] * {
   color: #0b1220 !important;
   -webkit-text-fill-color: #0b1220 !important;
 }
-
-/* placeholder داخل input/textarea */
 input::placeholder,
 textarea::placeholder,
 div[data-baseweb="input"] input::placeholder,
@@ -81,8 +71,6 @@ div[data-baseweb="textarea"] textarea::placeholder {
   color: #6b7280 !important;
   -webkit-text-fill-color: #6b7280 !important;
 }
-
-/* Date input تحديداً (يصير واضح) */
 [data-testid="stDateInput"] input {
   background: #ffffff !important;
   color: #0b1220 !important;
@@ -96,17 +84,12 @@ div[role="listbox"] * {
   color: #0b1220 !important;
   -webkit-text-fill-color: #0b1220 !important;
 }
-
 div[data-baseweb="popover"],
 ul[role="listbox"],
 div[role="listbox"] {
   background: #ffffff !important;
 }
-
-li[role="option"] {
-  background: #ffffff !important;
-}
-
+li[role="option"] { background: #ffffff !important; }
 li[role="option"]:hover,
 li[role="option"][aria-selected="true"] {
   background: #e5e7eb !important;
@@ -121,7 +104,7 @@ table, th, td { color: #f8fafc !important; }
 .header-box {
   background: linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
   padding:2rem; border-radius:20px; border:1px solid #334155;
-  margin-bottom:2rem; text-align:center !important;
+  margin-bottom:1.25rem; text-align:center !important;
   box-shadow:0 10px 15px -3px rgba(0,0,0,0.3);
 }
 .main-title {
@@ -142,6 +125,16 @@ table, th, td { color: #f8fafc !important; }
   height:3.5rem;
   border:none;
 }
+
+/* ===== شكل شبيه Tabs للـ radio ===== */
+div[role="radiogroup"]{gap:10px;}
+div[role="radiogroup"] label{
+  background:#1e293b;
+  border:1px solid #334155;
+  border-radius:12px;
+  padding:10px 14px;
+}
+div[role="radiogroup"] label:hover{border-color:#60a5fa;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -164,7 +157,7 @@ def refresh_data_cache():
 # -----------------------------
 # جلب البيانات
 # -----------------------------
-@st.cache_data(ttl=10)
+@st.cache_data(ttl=5)
 def fetch_students_df() -> pd.DataFrame:
     res = supabase.table("students").select("*").execute()
     data = res.data or []
@@ -176,7 +169,7 @@ def fetch_students_df() -> pd.DataFrame:
             df[col] = df[col].apply(norm_text)
     return df
 
-@st.cache_data(ttl=10)
+@st.cache_data(ttl=5)
 def fetch_attendance_df() -> pd.DataFrame:
     res = supabase.table("attendance").select("*").execute()
     data = res.data or []
@@ -241,7 +234,7 @@ PASSWORDS = {
 
 target_cat = st.selectbox("📂 اختر الفئة:", list(PASSWORDS.keys()))
 
-# ✅ رسائل نجاح بعد rerun الطبيعي من Streamlit (بدون st.rerun)
+# ✅ رسائل نجاح بعد الاعتماد
 if st.session_state.get("ATT_OK_MSG"):
     st.success(st.session_state["ATT_OK_MSG"])
     st.session_state["ATT_OK_MSG"] = ""
@@ -256,12 +249,24 @@ df_logs["category"] = df_logs["category"].apply(norm_text) if "category" in df_l
 m_list = df_students[df_students["category"] == norm_text(target_cat)].sort_values(by="name", ignore_index=True) if not df_students.empty else pd.DataFrame()
 l_list = df_logs[df_logs["category"] == norm_text(target_cat)].copy() if not df_logs.empty else pd.DataFrame()
 
-tab_stats, tab_admin = st.tabs(["📊 كشف الالتزام", "🔐 بوابة المشرف"])
+# =============================
+# ✅ بديل st.tabs: راديو أفقي يثبت ولا يرجّعك للأول
+# =============================
+if "main_view" not in st.session_state:
+    st.session_state["main_view"] = "🔐 بوابة المشرف"  # خليه الافتراضي مشرف
+
+main_view = st.radio(
+    "التنقل:",
+    ["📊 كشف الالتزام", "🔐 بوابة المشرف"],
+    horizontal=True,
+    key="main_view",
+    label_visibility="collapsed"
+)
 
 # =============================
-# كشف الالتزام (بدون أيام الحضور في الجدول)
+# كشف الالتزام
 # =============================
-with tab_stats:
+if main_view == "📊 كشف الالتزام":
     if m_list.empty:
         st.info("لا توجد طلاب في هذه الفئة.")
     else:
@@ -275,14 +280,15 @@ with tab_stats:
                 return 0
             return l_list[l_list["name"] == norm_text(student_name)]["date"].dt.date.nunique()
 
-        m_list["_أيام_الحضور"] = m_list["name"].apply(days_present)
-        m_list["النسبة المئوية"] = (
-            (m_list["_أيام_الحضور"] / total_days * 100).round(1).astype(str) + "%"
+        view_df = m_list.copy()
+        view_df["_أيام_الحضور"] = view_df["name"].apply(days_present)
+        view_df["النسبة المئوية"] = (
+            (view_df["_أيام_الحضور"] / total_days * 100).round(1).astype(str) + "%"
             if total_days > 0 else "0%"
         )
 
         st.table(
-            m_list[["name", "mosque", "grade", "النسبة المئوية"]].rename(columns={
+            view_df[["name", "mosque", "grade", "النسبة المئوية"]].rename(columns={
                 "name": "الاسم",
                 "mosque": "المسجد",
                 "grade": "المرحلة الدراسية"
@@ -292,20 +298,29 @@ with tab_stats:
 # =============================
 # بوابة المشرف
 # =============================
-with tab_admin:
+else:
     pwd = st.text_input("أدخل كلمة المرور:", type="password")
 
     if pwd == PASSWORDS.get(target_cat):
         st.success("تم تسجيل الدخول ✅")
 
-        sub1, sub2, sub3 = st.tabs(["📝 تسجيل الحضور", "➕ إدارة الطلاب", "📥 التقارير التفصيلية"])
+        if "admin_view" not in st.session_state:
+            st.session_state["admin_view"] = "📝 تسجيل الحضور"
+
+        admin_view = st.radio(
+            "لوحة المشرف:",
+            ["📝 تسجيل الحضور", "➕ إدارة الطلاب", "📥 التقارير التفصيلية"],
+            horizontal=True,
+            key="admin_view",
+            label_visibility="collapsed"
+        )
 
         # -----------------------------
-        # تسجيل الحضور (FIX: keys فريدة باستخدام id + بدون st.rerun)
+        # 📝 تسجيل الحضور
         # -----------------------------
-        with sub1:
+        if admin_view == "📝 تسجيل الحضور":
             if m_list.empty:
-                st.info("لا يوجد طلاب لهذه الفئة بعد. أضف طلاب من تبويب (إدارة الطلاب).")
+                st.info("لا يوجد طلاب لهذه الفئة بعد. أضف طلاب من (إدارة الطلاب).")
             else:
                 attendance_day = st.date_input(
                     "اختر تاريخ الحضور:",
@@ -313,7 +328,7 @@ with tab_admin:
                     key=f"att_date_{target_cat}"
                 )
 
-                # ✅ تصفير الصحّات قبل رسمها (حتى ما يصير StreamlitAPIException)
+                # ✅ Reset للـ checkboxes قبل رسمها
                 if st.session_state.get("RESET_ATT") and st.session_state.get("RESET_KEYS"):
                     for k in st.session_state["RESET_KEYS"]:
                         st.session_state[k] = False
@@ -324,14 +339,12 @@ with tab_admin:
                 selected_students = []
                 checkbox_keys = []
 
-                # ✅ KEY = يعتمد على id (فريد) بدل الاسم (قد يتكرر)
+                # ✅ KEY فريد باستخدام id
                 for _, row in m_list.iterrows():
                     sid = int(row["id"])
                     n = row["name"]
-
                     k = f"att_{target_cat}_{attendance_day}_{sid}"
                     checkbox_keys.append(k)
-
                     if st.checkbox(n, key=k):
                         selected_students.append(n)
 
@@ -341,19 +354,21 @@ with tab_admin:
                     else:
                         add_attendance_bulk(selected_students, target_cat, attendance_day)
 
-                        # ✅ لا نلمس قيم الـ checkbox الآن (بعد ما انرسمت)، نخليها تتصفّر بالرّن القادم
+                        # ✅ نخلي التصـفير بالرّن القادم
                         st.session_state["RESET_ATT"] = True
                         st.session_state["RESET_KEYS"] = checkbox_keys
 
-                        st.session_state["ATT_OK_MSG"] = "تم اعتماد كشف الحضور ✅"
+                        # ✅ تثبيت المكان بعد الرن: مشرف + تسجيل الحضور
+                        st.session_state["main_view"] = "🔐 بوابة المشرف"
+                        st.session_state["admin_view"] = "📝 تسجيل الحضور"
 
-                        # ✅ تحديث الداتا بدون st.rerun (الضغط على الزر أصلاً يعمل rerun طبيعي)
+                        st.session_state["ATT_OK_MSG"] = "تم اعتماد كشف الحضور ✅"
                         refresh_data_cache()
 
         # -----------------------------
-        # إدارة الطلاب
+        # ➕ إدارة الطلاب
         # -----------------------------
-        with sub2:
+        elif admin_view == "➕ إدارة الطلاب":
             with st.form(key=f"add_student_{target_cat}", clear_on_submit=True):
                 name_in = st.text_input("الاسم الثلاثي")
                 msq_in = st.selectbox("المسجد", ["شاهه العبيد", "اليوسفين", "العسعوسي", "السهو", "فاطمه الغلوم", "الصقعبي", "الرشيد", "الرومي"])
@@ -366,6 +381,8 @@ with tab_admin:
                 else:
                     add_student_to_db(name_in, msq_in, lvl_in, target_cat)
                     st.success(f"تمت إضافة {norm_text(name_in)} ✅")
+                    st.session_state["main_view"] = "🔐 بوابة المشرف"
+                    st.session_state["admin_view"] = "➕ إدارة الطلاب"
                     refresh_data_cache()
 
             st.divider()
@@ -381,12 +398,14 @@ with tab_admin:
                 if st.button("🗑️ حذف الطالب", use_container_width=True):
                     delete_student_from_db(chosen[0])
                     st.success("تم حذف الطالب ✅")
+                    st.session_state["main_view"] = "🔐 بوابة المشرف"
+                    st.session_state["admin_view"] = "➕ إدارة الطلاب"
                     refresh_data_cache()
 
         # -----------------------------
-        # التقارير التفصيلية
+        # 📥 التقارير التفصيلية
         # -----------------------------
-        with sub3:
+        else:
             if m_list.empty:
                 st.info("لا يوجد طلاب في هذه الفئة.")
             else:
